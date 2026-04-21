@@ -14,7 +14,7 @@ class BacktestSession:
     combined_returns: pd.DataFrame
     portfolios: dict[str, PortfolioResult]
 
-def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, band=0.05) -> Result[BacktestSession, Exception]:
+def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame) -> Result[BacktestSession, Exception]:
 
     try:
         # Calculate percent change per day
@@ -36,7 +36,7 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
             target_weights = filtered_portfolio_df[port_name].dropna()
 
             # Run the backtest - returns a tuple (Series, DataFrame)
-            port_result = run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq, rb_type, band)
+            port_result = run_backtest_one_portfolio(port_name, assets_meta_df, asset_returns, target_weights, rb_check_freq, rb_type)
             
             # Store results
             all_strategies_returns[port_name] = port_result.returns
@@ -56,7 +56,7 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
         return Err(e) 
 
 
-def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq: str | None, rb_type: str | None, band) -> PortfolioResult:
+def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, asset_returns: pd.DataFrame, target_weights, rb_check_freq: str | None, rb_type: str | None) -> PortfolioResult:
 
     # Filter asset_returns to ONLY the assets in this specific portfolio
     # This prevents extra columns from appearing in weights_df
@@ -84,7 +84,7 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
         # Rebalance
         period = get_period(date)
         if period != last_period:
-            current_weights = rb_func(current_weights, target_weights, band)
+            current_weights = rb_func(current_weights, target_weights, assets_meta_df)
             last_period = period
 
         # Store weights at the start of the day (overnight holdings)
@@ -114,23 +114,16 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
         rebalance_type=actual_rb_type
     )
 
-def rebalance_full(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
-    """Always returns the ideal weights (full reset)."""
-    return ideal_weights
+def rebalance_full(current: pd.Series, ideal: pd.Series, assets_meta: pd.DataFrame) -> pd.Series:
+    return ideal
 
-def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
-    """Always returns the ideal weights (full reset)."""
-    return ideal_weights
-
-def rebalance_sigma2(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band) -> pd.Series:
+def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, assets_meta: pd.DataFrame) -> pd.Series:
     """
     Surgical rebalance:
     - Trigger: Drift > 1.0 * sigma
     - Action: Adjust trigger asset and its opposite counterpart to 0.5 * sigma
     """
-    # Ensure band is a Series indexed like our assets
-    # If it's a float, we convert it to a Series of the same value for all
-    sigmas = band if isinstance(band, pd.Series) else pd.Series(band, index=ideal_weights.index)
+    sigmas = assets_meta['StdDev']
 
     # 1. Calculate Relative Drift: (Current / Target) - 1
     drift_pct = (current_weights / ideal_weights) - 1
@@ -166,12 +159,6 @@ def rebalance_sigma2(current_weights: pd.Series, ideal_weights: pd.Series, asset
     
     return new_weights
 
-def rebalance_band(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
-    """Returns ideal weights only if the max drift exceeds the band; otherwise returns current."""
-    drift = (current_weights - ideal_weights).abs().max()
-    if drift > band:
-        return ideal_weights
-    return current_weights
 
 def period_once(_: pd.Timestamp):
     return "CONSTANT_PERIOD"
@@ -223,6 +210,5 @@ PERIOD_MAPPING = {
 REBALANCE_STRATEGIES = {
     'full': rebalance_full,
     'sigma': rebalance_sigma,
-    'band': rebalance_band,
 }
 
