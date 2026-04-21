@@ -1,7 +1,6 @@
 import pandas as pd
 from dataclasses import dataclass
 from public.src.result import Result, Ok, Err
-from typing import Optional, Any
 
 @dataclass(frozen=True)
 class PortfolioResult:
