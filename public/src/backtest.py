@@ -78,14 +78,24 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     portfolio_returns = []
     historical_weights = []
 
+    # RESOLVE PERIOD FUNCTION BEFORE THE LOOP
+    # If no freq, use a constant function so period != last_period is only true on day 1
+    freq_key = str(rb_check_freq).lower().strip() if rb_check_freq else None
+    get_period = PERIOD_MAPPING.get(freq_key, lambda d: "CONSTANT_PERIOD")
+
+    # RESOLVE REBALANCE STRATEGY BEFORE THE LOOP
+    rb_type_key = str(rb_type).lower().strip() if rb_type else 'full'
+    rb_func = REBALANCE_STRATEGIES.get(rb_type_key, rebalance_full)
+
     # last_period = None
     last_period = "INITIAL_DUMMY_PERIOD"
-    rb_type_lower = rb_type.lower().strip()
-    rb_func = REBALANCE_STRATEGIES.get(rb_type_lower, rebalance_full)
+    # rb_type_lower = rb_type.lower().strip()
+    # rb_func = REBALANCE_STRATEGIES.get(rb_type_lower, rebalance_full)
 
     for date in asset_returns.index:
         # Rebalance Check
-        period = get_rebalance_period(date, rb_check_freq)
+        # period = get_rebalance_period(date, rb_check_freq)
+        period = get_period(date)
 
         if period != last_period:
             current_weights = rb_func(
@@ -150,28 +160,6 @@ def period_half_yearly(date: pd.Timestamp):
 
 def period_yearly(date: pd.Timestamp):
     return date.year
-
-# def get_rebalance_period(date: pd.Timestamp, freq: str | None) -> Optional[Any]:
-#     if not freq:
-#         return None
-
-#     # Standardize the input
-#     f = freq.lower().strip()
-
-#     if f in ('d', 'daily'):
-#         return date
-#     if f in ('w', 'weekly'):
-#         return (date.year, date.isocalendar()[1])
-#     if f in ('m', 'monthly'):
-#         return (date.year, date.month)
-#     if f in ('q', 'quarterly'):
-#         return (date.year, (date.month - 1) // 3)
-#     if f in ('h', 'half-year', 'semi-annual'):
-#         return (date.year, 0 if date.month <= 6 else 1)
-#     if f in ('y', 'yearly'):
-#         return date.year
-        
-#     return None
 
 
 def get_rebalance_period(date: pd.Timestamp, freq: Optional[str]) -> Optional[Any]:
