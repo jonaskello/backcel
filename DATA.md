@@ -23,6 +23,9 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 | **portfolio_sheet**| `Strategy_A` | Sheet name in `main.xlsx` for weights. (Repeatable). |
 | **assets_file** | `Assets.xlsx` | External file for asset metadata/prices. (Repeatable). |
 
+> [!TIP] 
+> Setting names starting with underscore (`_`) will be ignored. This can be used to disable settings without removing them.
+
 ---
 
 ## 📂 2. Asset Registry (`assets_file`)
