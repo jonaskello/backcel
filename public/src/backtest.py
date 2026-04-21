@@ -33,7 +33,6 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
             # Get rebalance settings for this portfolio
             rb_check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
             rebalance_type = parse_rb_type(port_name, rb_type)
-            print(rb_check_freq, rebalance_type)
 
             # Get weights for this portfolio
             target_weights = filtered_portfolio_df[port_name].dropna()
@@ -58,7 +57,15 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
     except Exception as e:
         return Err(e) 
 
+
 def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq: str | None, rb_type: str, band) -> PortfolioResult:
+
+    REBALANCE_STRATEGIES = {
+        'full': rebalance_full,
+        'band': rebalance_band,
+        'equal': rebalance_equal_weight,
+    }
+
     # Filter asset_returns to ONLY the assets in this specific portfolio
     # This prevents extra columns from appearing in weights_df
     portfolio_assets = target_weights.index
@@ -74,21 +81,30 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
 
     # last_period = None
     last_period = "INITIAL_STATE"
+    strategy_func = REBALANCE_STRATEGIES.get(rb_type, rebalance_full)
 
     for date in asset_returns.index:
         # Rebalance Check
         period = get_rebalance_period(date, rb_check_freq)
 
         if period != last_period:
-            do_reset = False
-            if rb_type == 'full':
-                do_reset = True
-            elif rb_type == 'band':
-                if (current_weights - target_weights).abs().max() > band:
-                    do_reset = True
+            # do_reset = False
+            # if rb_type == 'full':
+            #     do_reset = True
+            # elif rb_type == 'band':
+            #     if (current_weights - target_weights).abs().max() > band:
+            #         do_reset = True
             
-            if do_reset:
-                current_weights = target_weights.copy()
+            # if do_reset:
+            #     current_weights = target_weights.copy()
+
+            current_weights = strategy_func(
+                current_weights=current_weights,
+                ideal_weights=target_weights,
+                asset_data=asset_returns.loc[:date],
+                band=band
+            )
+
             last_period = period
 
         # Store weights at the start of the day (overnight holdings)
@@ -118,6 +134,21 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
         rebalance_type=rb_type
     )
 
+def rebalance_full(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band: float) -> pd.Series:
+    """Always returns the ideal weights (full reset)."""
+    return ideal_weights
+
+def rebalance_band(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band: float) -> pd.Series:
+    """Returns ideal weights only if the max drift exceeds the band; otherwise returns current."""
+    drift = (current_weights - ideal_weights).abs().max()
+    if drift > band:
+        return ideal_weights
+    return current_weights
+
+def rebalance_equal_weight(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band: float) -> pd.Series:
+    """Ignores ideal_weights and returns a 1/N allocation based on available assets."""
+    n = len(asset_data.columns)
+    return pd.Series(1.0 / n, index=asset_data.columns)
 
 def get_rebalance_period(date: pd.Timestamp, freq: Optional[str]) -> Optional[Any]:
     if not freq:
