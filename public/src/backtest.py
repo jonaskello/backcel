@@ -66,7 +66,11 @@ def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, ass
     if missing:
         raise ValueError(f"Portfolio '{port_name}' has assets missing from price data: {missing}")
 
-    asset_returns = asset_returns[portfolio_assets]
+    asset_returns_portfolio = asset_returns[portfolio_assets]
+
+    assets_meta_portfolio = assets_meta_df.reindex(portfolio_assets)
+    assets_meta_portfolio['stddev'] = pd.to_numeric(assets_meta_portfolio['stddev'], errors='coerce').fillna(0.05)
+
     current_weights = target_weights.copy()
     portfolio_returns = []
     historical_weights = []
@@ -80,30 +84,30 @@ def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, ass
     # Init period so it will trigger first rebalance directly
     last_period = "INITIAL_DUMMY_PERIOD"
 
-    for date in asset_returns.index:
+    for date in asset_returns_portfolio.index:
         # Rebalance
         period = get_period(date)
         if period != last_period:
-            current_weights = rb_func(current_weights, target_weights, assets_meta_df)
+            current_weights = rb_func(current_weights, target_weights, assets_meta_portfolio)
             last_period = period
 
         # Store weights at the start of the day (overnight holdings)
         historical_weights.append(current_weights.copy())
 
         # Calculate today's portfolio return
-        daily_ret = (asset_returns.loc[date] * current_weights).sum()
+        daily_ret = (asset_returns_portfolio.loc[date] * current_weights).sum()
         portfolio_returns.append(daily_ret)
 
         # Drift the weights for tomorrow, this reflects that winners now take up more of the pie
-        current_weights = current_weights * (1 + asset_returns.loc[date])
+        current_weights = current_weights * (1 + asset_returns_portfolio.loc[date])
         # Re-normalize weights so they represent the new % of total value
         current_weights = current_weights / current_weights.sum()
 
     # Create the returns Series
-    returns_series = pd.Series(portfolio_returns, index=asset_returns.index)
+    returns_series = pd.Series(portfolio_returns, index=asset_returns_portfolio.index)
     
     # Create the weights DataFrame
-    weights_df = pd.DataFrame(historical_weights, index=asset_returns.index)
+    weights_df = pd.DataFrame(historical_weights, index=asset_returns_portfolio.index)
     weights_df = weights_df.add_prefix(port_name + ">")
 
 
@@ -123,12 +127,15 @@ def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, assets
     - Trigger: Drift > 1.0 * sigma
     - Action: Adjust trigger asset and its opposite counterpart to 0.5 * sigma
     """
-    sigmas = assets_meta['StdDev']
+
+    sigmas = assets_meta['stddev'].fillna(0.10)
 
     # 1. Calculate Relative Drift: (Current / Target) - 1
     drift_pct = (current_weights / ideal_weights) - 1
     
     # 2. Check for breach of the 1-sigma rebalance span
+    print("sigmas", sigmas)
+    print("drift_pct.abs()", drift_pct.abs())
     breaches = drift_pct.abs() > sigmas
     
     if not breaches.any():
