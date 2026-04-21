@@ -58,18 +58,14 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
 
 def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, asset_returns: pd.DataFrame, target_weights, rb_check_freq: str | None, rb_type: str | None) -> PortfolioResult:
 
-    # Filter asset_returns to ONLY the assets in this specific portfolio
-    # This prevents extra columns from appearing in weights_df
     portfolio_assets = target_weights.index
-    
     missing = set(portfolio_assets) - set(asset_returns.columns)
     if missing:
         raise ValueError(f"Portfolio '{port_name}' has assets missing from price data: {missing}")
 
+    # Filter asset_returns to ONLY the assets in this specific portfolio
     asset_returns_portfolio = asset_returns[portfolio_assets]
-
     assets_meta_portfolio = assets_meta_df.reindex(portfolio_assets)
-    assets_meta_portfolio['stddev'] = pd.to_numeric(assets_meta_portfolio['stddev'], errors='coerce').fillna(0.05)
 
     current_weights = target_weights.copy()
     portfolio_returns = []
