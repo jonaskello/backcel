@@ -26,6 +26,9 @@ async def test_full_engine_run(test_file):
             backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
             match backtest_result:
                 case Ok(data):
+                    # Calculate cumulative growth (1.0 basis)
+                    portfolio_values = (1 + data.combined_returns).cumprod()
+                    print("portfolio_values", portfolio_values)
                     print("Results", data)
                 case Err(e):
                     print(f"Error: {e}")
