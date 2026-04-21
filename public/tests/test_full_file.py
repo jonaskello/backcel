@@ -1,10 +1,10 @@
 import traceback
-
-from public.src.result import Err, Ok
 import pytest
 import pandas as pd
+from public.src.result import Err, Ok
 from pathlib import Path
 from public.src import data_load_main as dlm
+from public.src import backtest as bn
 
 # Identify all test workbooks
 CURRENT_DIR = Path(__file__).parent
@@ -22,15 +22,31 @@ async def test_full_engine_run(test_file):
 
     # 1. Load settings from the test file itself
     # Note: load_settings uses test_file as the default container
+    # data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
+
+
+    # match data_load_result:
+    #     case Ok(data):
+    #         print("Result", data)    
+    #     case Err(e):
+    #         print(f"Error: {e}")
+    #         traceback.print_exception(e)
+
+
     data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
-
-
     match data_load_result:
         case Ok(data):
-            print("Result", data)    
+            portfolio_df, asset_prices_available, assets_meta_df = data
+            backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
+            match backtest_result:
+                case Ok(data):
+                    print("Results", data)
+                case Err(e):
+                    print(f"Error: {e}")
+                    traceback.print_exception(e)
         case Err(e):
             print(f"Error: {e}")
-            traceback.print_exception(e)
+
 
 
     # # 2. Extract Data (Simplified for the example)

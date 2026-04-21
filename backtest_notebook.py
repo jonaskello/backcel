@@ -87,8 +87,8 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
     # RUN BACKTEST
 
     import traceback
-    import public.src.backtest as bn
-    import public.src.report as nr
+    from public.src import backtest as bn
+    from public.src import report as nr
     from public.src.result import Ok, Err
 
     if run_btn.value:
