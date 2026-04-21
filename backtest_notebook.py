@@ -114,7 +114,10 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
             backtest_result = bn.run_backtest_all(asset_prices_available, portfolio_df)
             match backtest_result:
                 case Ok(data):
-                    combined_returns, weights_per_port= data
+                    # combined_returns, weights_per_port= data
+                    combined_returns = data.combined_returns
+                    # Reconstruct the old weights dict for backward compatibility
+                    # weights_per_port = {name: p.weights for name, p in data.portfolios.items()}
                 case Err(e):
                     print(f"Error: {e}")
                     traceback.print_exception(e)

@@ -9,7 +9,12 @@ class PortfolioResult:
     check_freq: str
     rebalance_type: str
 
-def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, band=0.05) -> Result[tuple[pd.DataFrame, pd.DataFrame], Exception]:
+@dataclass(frozen=True)
+class BacktestSession:
+    combined_returns: pd.DataFrame
+    portfolios: dict[str, PortfolioResult]
+
+def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, band=0.05) -> Result[BacktestSession, Exception]:
 
     try:
         # Calculate percent change per day
@@ -44,8 +49,12 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
         # Combine all returns into a single DataFrame
         combined_returns = pd.DataFrame(all_strategies_returns)
         
-        # Return both: a DataFrame and a Dictionary
-        return Ok((combined_returns, all_strategies_weights))
+        # # Return both: a DataFrame and a Dictionary
+        # return Ok((combined_returns, all_strategies_weights))
+        return Ok(BacktestSession(
+            combined_returns=combined_returns, 
+            portfolios=all_strategies_weights
+        ))
 
     except Exception as e:
         return Err(e) 
@@ -121,8 +130,6 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_f
         check_freq=check_freq,
         rebalance_type=rebalance_type
     )
-
-    # return returns_series, weights_df
 
 def get_rebalance_settings(name, df_portfolios):
 
