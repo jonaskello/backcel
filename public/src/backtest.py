@@ -118,6 +118,10 @@ def rebalance_full(current_weights: pd.Series, ideal_weights: pd.Series, band: f
     """Always returns the ideal weights (full reset)."""
     return ideal_weights
 
+def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
+    """Always returns the ideal weights (full reset)."""
+    return ideal_weights
+
 def rebalance_band(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
     """Returns ideal weights only if the max drift exceeds the band; otherwise returns current."""
     drift = (current_weights - ideal_weights).abs().max()
@@ -174,6 +178,7 @@ PERIOD_MAPPING = {
 
 REBALANCE_STRATEGIES = {
     'full': rebalance_full,
+    'sigma': rebalance_sigma,
     'band': rebalance_band,
 }
 
