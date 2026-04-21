@@ -21,7 +21,7 @@ async def test_full_engine_run(test_file):
 
     base_dir = "./public/tests/data"
     data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
-    expected_load_result = await load_expected(base_dir, test_file)
+    expected_portfolio_values, expected_portfolio_weights = await load_expected(base_dir, test_file)
     match data_load_result:
         case Ok(data):
             portfolio_df, asset_prices_available, assets_meta_df = data
@@ -30,30 +30,20 @@ async def test_full_engine_run(test_file):
                 case Ok(data):
                     # Calculate cumulative growth (1.0 basis)
                     portfolio_values = (1 + data.combined_returns).cumprod()
-                    print("portfolio_values", portfolio_values)
-                    print("Results", data)
+                    # print("portfolio_values", portfolio_values)
+                    # print("Results", data)
+                    print("portfolio_values.columns", portfolio_values.columns)
+                    print("expected_portfolio_values.columns", expected_portfolio_values.columns)
+                    # Compare your backtest result to the 'Expected' sheet
+                    pd.testing.assert_frame_equal(portfolio_values, expected_portfolio_values)
                 case Err(e):
                     print(f"Error: {e}")
                     traceback.print_exception(e)
         case Err(e):
             print(f"Error: {e}")
 
-
-
-    # # 2. Extract Data (Simplified for the example)
-    # # This would call your actual engine: run_backtest(...)
-    # # For now, we simulate the 'result'
-    # asset_file, asset_sheet = asset_src[0]
-    # actual_data = pd.read_excel(TEST_DATA_DIR / asset_file, sheet_name=asset_sheet)
-    
-    # # 3. Load 'Expected' sheet from the same file
-    # expected_data = pd.read_excel(test_file, sheet_name='Expected')
-    
-    # # 4. Assert
-    # # Compare your backtest result to the 'Expected' sheet
-    # pd.testing.assert_frame_equal(actual_data, actual_data) # Replace with real results
-
 async def load_expected(base_dir, test_file):
     file_path = os.path.join(base_dir, test_file)
-    expected_portfolio_values = pd.read_excel(file_path, sheet_name='Expected_Portfolio_Values')
-    return expected_portfolio_values
+    expected_portfolio_values = pd.read_excel(file_path, sheet_name='Expected_Portfolio_Values', index_col='Date')
+    expected_portfolio_weights = pd.read_excel(file_path, sheet_name='Expected_Portfolio_Weights', index_col='Date')
+    return expected_portfolio_values, expected_portfolio_weights
