@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from public.src.backtest import rebalance_sigma # Adjust path to your package name
+from public.src.backtest import rebalance_sigma
 
 def test_sigma_rebalance_trigger():
     # Setup data

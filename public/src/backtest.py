@@ -130,8 +130,6 @@ def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, assets
     drift_pct = (current_weights / ideal_weights) - 1
     
     # 2. Check for breach of the 1-sigma rebalance span
-    print("sigmas", sigmas)
-    print("drift_pct.abs()", drift_pct.abs())
     breaches = drift_pct.abs() > sigmas
     
     if not breaches.any():
