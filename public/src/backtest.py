@@ -62,7 +62,6 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     REBALANCE_STRATEGIES = {
         'full': rebalance_full,
         'band': rebalance_band,
-        'equal': rebalance_equal_weight,
     }
 
     # Filter asset_returns to ONLY the assets in this specific portfolio
@@ -91,7 +90,6 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
             current_weights = rb_func(
                 current_weights=current_weights,
                 ideal_weights=target_weights,
-                asset_data=asset_returns.loc[:date],
                 band=band
             )
             last_period = period
@@ -123,21 +121,17 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
         rebalance_type=rb_type
     )
 
-def rebalance_full(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band: float) -> pd.Series:
+def rebalance_full(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
     """Always returns the ideal weights (full reset)."""
     return ideal_weights
 
-def rebalance_band(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band: float) -> pd.Series:
+def rebalance_band(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
     """Returns ideal weights only if the max drift exceeds the band; otherwise returns current."""
     drift = (current_weights - ideal_weights).abs().max()
     if drift > band:
         return ideal_weights
     return current_weights
 
-def rebalance_equal_weight(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band: float) -> pd.Series:
-    """Ignores ideal_weights and returns a 1/N allocation based on available assets."""
-    n = len(asset_data.columns)
-    return pd.Series(1.0 / n, index=asset_data.columns)
 
 def get_rebalance_period(date: pd.Timestamp, freq: Optional[str]) -> Optional[Any]:
     if not freq:
