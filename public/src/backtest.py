@@ -147,20 +147,6 @@ def period_half_yearly(date: pd.Timestamp):
 def period_yearly(date: pd.Timestamp):
     return date.year
 
-
-def get_rebalance_period(date: pd.Timestamp, freq: Optional[str]) -> Optional[Any]:
-    if not freq:
-        return None
-    
-    # Standardize and look up the period generator
-    f = str(freq).lower().strip()
-    period_func = PERIOD_MAPPING.get(f)
-    
-    if period_func:
-        return period_func(date)
-    
-    return None
-
 def get_rebalance_settings(name, df_portfolios):
 
     if '__rb_run' in df_portfolios.index:
