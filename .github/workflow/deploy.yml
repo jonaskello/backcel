@@ -1,0 +1,39 @@
+name: Deploy marimo wasm to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Export Notebook to WASM
+        run: |
+          uv run marimo export html-wasm backtest_notebook.py --no-sandbox
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: publish
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
