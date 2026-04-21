@@ -19,20 +19,6 @@ async def test_full_engine_run(test_file):
         print(msg)
 
     base_dir = "./public/tests/data"
-
-    # 1. Load settings from the test file itself
-    # Note: load_settings uses test_file as the default container
-    # data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
-
-
-    # match data_load_result:
-    #     case Ok(data):
-    #         print("Result", data)    
-    #     case Err(e):
-    #         print(f"Error: {e}")
-    #         traceback.print_exception(e)
-
-
     data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
     match data_load_result:
         case Ok(data):
