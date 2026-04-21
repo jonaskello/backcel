@@ -59,6 +59,7 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
 
 def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq: str | None, rb_type: str | None, band) -> PortfolioResult:
 
+
     REBALANCE_STRATEGIES = {
         'full': rebalance_full,
         'band': rebalance_band,
@@ -132,27 +133,58 @@ def rebalance_band(current_weights: pd.Series, ideal_weights: pd.Series, band: f
         return ideal_weights
     return current_weights
 
+def period_daily(date: pd.Timestamp):
+    return date
+
+def period_weekly(date: pd.Timestamp):
+    return (date.year, date.isocalendar()[1])
+
+def period_monthly(date: pd.Timestamp):
+    return (date.year, date.month)
+
+def period_quarterly(date: pd.Timestamp):
+    return (date.year, (date.month - 1) // 3)
+
+def period_half_yearly(date: pd.Timestamp):
+    return (date.year, 0 if date.month <= 6 else 1)
+
+def period_yearly(date: pd.Timestamp):
+    return date.year
+
+# def get_rebalance_period(date: pd.Timestamp, freq: str | None) -> Optional[Any]:
+#     if not freq:
+#         return None
+
+#     # Standardize the input
+#     f = freq.lower().strip()
+
+#     if f in ('d', 'daily'):
+#         return date
+#     if f in ('w', 'weekly'):
+#         return (date.year, date.isocalendar()[1])
+#     if f in ('m', 'monthly'):
+#         return (date.year, date.month)
+#     if f in ('q', 'quarterly'):
+#         return (date.year, (date.month - 1) // 3)
+#     if f in ('h', 'half-year', 'semi-annual'):
+#         return (date.year, 0 if date.month <= 6 else 1)
+#     if f in ('y', 'yearly'):
+#         return date.year
+        
+#     return None
+
 
 def get_rebalance_period(date: pd.Timestamp, freq: Optional[str]) -> Optional[Any]:
     if not freq:
         return None
-
-    # Standardize the input
-    f = freq.lower().strip()
-
-    if f in ('d', 'daily'):
-        return date
-    if f in ('w', 'weekly'):
-        return (date.year, date.isocalendar()[1])
-    if f in ('m', 'monthly'):
-        return (date.year, date.month)
-    if f in ('q', 'quarterly'):
-        return (date.year, (date.month - 1) // 3)
-    if f in ('h', 'half-year', 'semi-annual'):
-        return (date.year, 0 if date.month <= 6 else 1)
-    if f in ('y', 'yearly'):
-        return date.year
-        
+    
+    # Standardize and look up the period generator
+    f = str(freq).lower().strip()
+    period_func = PERIOD_MAPPING.get(f)
+    
+    if period_func:
+        return period_func(date)
+    
     return None
 
 def get_rebalance_settings(name, df_portfolios):
@@ -171,3 +203,11 @@ def get_rebalance_settings(name, df_portfolios):
 
     return rb_run, rb_type
 
+PERIOD_MAPPING = {
+    'd': period_daily, 'daily': period_daily,
+    'w': period_weekly, 'weekly': period_weekly,
+    'm': period_monthly, 'monthly': period_monthly,
+    'q': period_quarterly, 'quarterly': period_quarterly,
+    'h': period_half_yearly, 'half-year': period_half_yearly, 'semi-annual': period_half_yearly,
+    'y': period_yearly, 'yearly': period_yearly
+}
