@@ -4,8 +4,25 @@ import numpy as np
 import plotly.graph_objects as go
 from public.src.backtest import BacktestSession
 
-def get_stats(df):
+def show_results(results: BacktestSession):
+    # This will show a table with a row for each portfolio
+    summary_table = get_stats(results)
+    ui_portfolio_table = mo.Html(summary_table.to_html())
+
+    # Calculate cumulative growth (1.0 basis)
+    equity_curves = (1 + results.combined_returns).cumprod()
+    fig = portfolio_perf(equity_curves)
+    plt = portfolio_drawdown_plot2(equity_curves)
+
+    # Use marimo's UI wrapper to ensure visibility in WASM
+    ui_portfolio_curves = (mo.ui.plotly(fig))
+    ui_drawdown_curves = mo.ui.plotly(plt)
+    ui_all = mo.vstack([ui_portfolio_table, ui_portfolio_curves, ui_drawdown_curves])
+    mo.output.replace(ui_all)
+
+def get_stats(results: BacktestSession):
     stats = {}
+    df = results.combined_returns
     
     # Use Log Returns for Volatility (to match bt/ffn logic)
     log_returns = np.log(1 + df).replace([np.inf, -np.inf], 0)
@@ -17,10 +34,9 @@ def get_stats(df):
     stats['End'] = end_date
     years = (end_date - start_date).days / 365.25
 
-    stats['RB Check'] = "Yearly"
-    stats['RB Type'] = "Full"
-    stats['End'] = end_date
-
+    # Create a mapping for the settings
+    stats['RB Check'] = {name: p.check_freq for name, p in results.portfolios.items()}
+    stats['RB Type'] = {name: p.rebalance_type for name, p in results.portfolios.items()}
 
     # Total Return (Arithmetic)
     total_return_factor = (1 + df).prod()
@@ -181,18 +197,3 @@ def portfolio_drawdown_plot2(wealth_index):
 
     return fig
 
-def show_results(results: BacktestSession):
-    # This will show a table with a row for each portfolio
-    summary_table = get_stats(results.combined_returns)
-    ui_portfolio_table = mo.Html(summary_table.to_html())
-
-    # Calculate cumulative growth (1.0 basis)
-    equity_curves = (1 + results.combined_returns).cumprod()
-    fig = portfolio_perf(equity_curves)
-    plt = portfolio_drawdown_plot2(equity_curves)
-
-    # Use marimo's UI wrapper to ensure visibility in WASM
-    ui_portfolio_curves = (mo.ui.plotly(fig))
-    ui_drawdown_curves = mo.ui.plotly(plt)
-    ui_all = mo.vstack([ui_portfolio_table, ui_portfolio_curves, ui_drawdown_curves])
-    mo.output.replace(ui_all)
