@@ -31,16 +31,16 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
         for port_name in filtered_portfolio_df.columns:
 
             # Get rebalance settings for this portfolio
-            rb_run, rb_type = get_rebalance_settings(port_name, portfolio_df)
-            check_freq = parse_rb_run(port_name, rb_run)
+            rb_check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
+            # check_freq = parse_rb_run(port_name, rb_run)
             rebalance_type = parse_rb_type(port_name, rb_type)
-            print(check_freq, rebalance_type)
+            print(rb_check_freq, rebalance_type)
 
             # Get weights for this portfolio
             target_weights = filtered_portfolio_df[port_name].dropna()
 
             # Run the backtest - returns a tuple (Series, DataFrame)
-            port_result = run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq, rebalance_type, band)
+            port_result = run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq, rebalance_type, band)
             
             # Store results
             all_strategies_returns[port_name] = port_result.returns
@@ -73,7 +73,8 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     portfolio_returns = []
     historical_weights = []
 
-    last_period = None
+    # last_period = None
+    last_period = "INITIAL_STATE"
 
     for date in asset_returns.index:
         # Rebalance Check
@@ -119,19 +120,26 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     )
 
 
-def get_rebalance_period(date: pd.Timestamp, freq: str) -> Optional[Any]:
-    if freq == 'D':
+def get_rebalance_period(date: pd.Timestamp, freq: Optional[str]) -> Optional[Any]:
+    if not freq:
+        return None
+
+    # Standardize the input
+    f = freq.lower().strip()
+
+    if f in ('d', 'daily'):
         return date
-    elif freq == 'W':
+    if f in ('w', 'weekly'):
         return (date.year, date.isocalendar()[1])
-    elif freq == 'M':
+    if f in ('m', 'monthly'):
         return (date.year, date.month)
-    elif freq == 'Q':
+    if f in ('q', 'quarterly'):
         return (date.year, (date.month - 1) // 3)
-    elif freq == 'H':
+    if f in ('h', 'half-year', 'semi-annual'):
         return (date.year, 0 if date.month <= 6 else 1)
-    elif freq == 'Y':
+    if f in ('y', 'yearly'):
         return date.year
+        
     return None
 
 def get_rebalance_settings(name, df_portfolios):
@@ -160,18 +168,3 @@ def parse_rb_type(name, rb_type):
 
     return rb_type_algo
 
-def parse_rb_run(name, rb_run):
-
-    if 'semi-annual' == rb_run or 'half-year' == rb_run:
-        run_algo = 'H'
-    elif 'monthly' == rb_run:
-        run_algo = 'M'
-    elif 'daily' == rb_run:
-        run_algo = 'D'
-    elif 'yearly' == rb_run:
-        run_algo = 'Y'
-    else:
-        print(f"{name} has unknown rebalance run setting '{rb_run}', defaulting to RunOnce")
-        run_algo = 'O'
-
-    return run_algo
