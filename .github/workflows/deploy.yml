@@ -29,7 +29,12 @@ jobs:
           sed -i "s|portfolio_logic-.*-py3-none-any.whl|portfolio_logic-$NEW_VERSION-py3-none-any.whl|g" backtest_notebook.py
 
       - name: Build local wheel
-        run: uv build public/
+        run: |
+          uv build public/
+          echo "--- Actual Wheel Filename ---"
+          ls public/dist/
+          echo "--- Injected Notebook Line ---"
+          grep "micropip.install" backtest_notebook.py
 
       - name: Export Notebook to WASM
         run: uv run marimo export html-wasm backtest_notebook.py -o publish/index.html --no-sandbox --force
