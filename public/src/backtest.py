@@ -82,14 +82,14 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     # last_period = None
     last_period = "INITIAL_DUMMY_PERIOD"
     rb_type_lower = rb_type.lower().strip()
-    strategy_func = REBALANCE_STRATEGIES.get(rb_type_lower, rebalance_full)
+    rb_func = REBALANCE_STRATEGIES.get(rb_type_lower, rebalance_full)
 
     for date in asset_returns.index:
         # Rebalance Check
         period = get_rebalance_period(date, rb_check_freq)
 
         if period != last_period:
-            current_weights = strategy_func(
+            current_weights = rb_func(
                 current_weights=current_weights,
                 ideal_weights=target_weights,
                 asset_data=asset_returns.loc[:date],
