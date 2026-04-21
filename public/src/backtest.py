@@ -59,12 +59,6 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
 
 def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq: str | None, rb_type: str | None, band) -> PortfolioResult:
 
-
-    REBALANCE_STRATEGIES = {
-        'full': rebalance_full,
-        'band': rebalance_band,
-    }
-
     # Filter asset_returns to ONLY the assets in this specific portfolio
     # This prevents extra columns from appearing in weights_df
     portfolio_assets = target_weights.index
@@ -80,8 +74,8 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
 
     # RESOLVE PERIOD FUNCTION BEFORE THE LOOP
     # If no freq, use a constant function so period != last_period is only true on day 1
-    freq_key = str(rb_check_freq).lower().strip() if rb_check_freq else None
-    get_period = PERIOD_MAPPING.get(freq_key, lambda d: "CONSTANT_PERIOD")
+    freq_key = str(rb_check_freq).lower().strip() if rb_check_freq else "once"
+    get_period = PERIOD_MAPPING.get(freq_key, period_once)
 
     # RESOLVE REBALANCE STRATEGY BEFORE THE LOOP
     rb_type_key = str(rb_type).lower().strip() if rb_type else 'full'
@@ -143,6 +137,9 @@ def rebalance_band(current_weights: pd.Series, ideal_weights: pd.Series, band: f
         return ideal_weights
     return current_weights
 
+def period_once(_: pd.Timestamp):
+    return "CONSTANT_PERIOD"
+
 def period_daily(date: pd.Timestamp):
     return date
 
@@ -197,5 +194,12 @@ PERIOD_MAPPING = {
     'monthly': period_monthly,
     'quarterly': period_quarterly,
     'half-year': period_half_yearly,
-    'yearly': period_yearly
+    'yearly': period_yearly,
+    'once': period_once
 }
+
+REBALANCE_STRATEGIES = {
+    'full': rebalance_full,
+    'band': rebalance_band,
+}
+
