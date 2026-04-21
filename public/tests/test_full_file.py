@@ -1,5 +1,6 @@
 import traceback
 import pytest
+import os
 import pandas as pd
 from public.src.result import Err, Ok
 from pathlib import Path
@@ -20,6 +21,7 @@ async def test_full_engine_run(test_file):
 
     base_dir = "./public/tests/data"
     data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
+    expected_load_result = await load_expected(base_dir, test_file)
     match data_load_result:
         case Ok(data):
             portfolio_df, asset_prices_available, assets_meta_df = data
@@ -50,3 +52,8 @@ async def test_full_engine_run(test_file):
     # # 4. Assert
     # # Compare your backtest result to the 'Expected' sheet
     # pd.testing.assert_frame_equal(actual_data, actual_data) # Replace with real results
+
+async def load_expected(base_dir, test_file):
+    file_path = os.path.join(base_dir, test_file)
+    expected_portfolio_values = pd.read_excel(file_path, sheet_name='Expected_Portfolio_Values')
+    return expected_portfolio_values
