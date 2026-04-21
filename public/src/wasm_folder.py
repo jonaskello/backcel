@@ -147,8 +147,13 @@ async def download_data_files(dest_path):
     print("download_data_files")
     import pyodide
     files = ["main.xlsx", "assets.xlsx", "indices.xlsx", "currencies.xlsx"]
+    timestamp = js.Date.now()
     for file_name in files:
         file_url = str(mo.notebook_location() / "public" / "example" / file_name)
-        response = await pyodide.http.pyfetch(file_url)
+        cache_busting_url = f"{file_url}?v={timestamp}"
+        response = await pyodide.http.pyfetch(cache_busting_url)
+        if response.status != 200:
+            print(f"Failed to download {file_name}: {response.status}")
+            continue
         with open(f"{dest_path}/{file_name}", "wb") as f:
             f.write(await response.bytes())
