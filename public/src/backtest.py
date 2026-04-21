@@ -1,6 +1,7 @@
 import pandas as pd
 from dataclasses import dataclass
 from public.src.result import Result, Ok, Err
+from typing import Optional, Any
 
 @dataclass(frozen=True)
 class PortfolioResult:
@@ -39,7 +40,6 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
             target_weights = filtered_portfolio_df[port_name].dropna()
 
             # Run the backtest - returns a tuple (Series, DataFrame)
-            # returns_series, weights_df = run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq, rebalance_type, band)
             port_result = run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq, rebalance_type, band)
             
             # Store results
@@ -59,7 +59,7 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
     except Exception as e:
         return Err(e) 
 
-def run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq='Y', rebalance_type='full', band=0.05):
+def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq, rb_type, band):
     # Filter asset_returns to ONLY the assets in this specific portfolio
     # This prevents extra columns from appearing in weights_df
     portfolio_assets = target_weights.index
@@ -77,26 +77,13 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_f
 
     for date in asset_returns.index:
         # Rebalance Check
-        if check_freq == 'D':
-            period = date
-        elif check_freq == 'W':
-            period = (date.year, date.isocalendar()[1])
-        elif check_freq == 'M':
-            period = (date.year, date.month)
-        elif check_freq == 'Q':
-            period = (date.year, (date.month - 1) // 3)
-        elif check_freq == 'H':
-            period = (date.year, 0 if date.month <= 6 else 1)
-        elif check_freq == 'Y':
-            period = date.year
-        else:
-            period = None
+        period = get_rebalance_period(date, rb_check_freq)
 
         if period != last_period:
             do_reset = False
-            if rebalance_type == 'full':
+            if rb_type == 'full':
                 do_reset = True
-            elif rebalance_type == 'band':
+            elif rb_type == 'band':
                 if (current_weights - target_weights).abs().max() > band:
                     do_reset = True
             
@@ -127,9 +114,25 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_f
     return PortfolioResult(
         returns=returns_series,
         weights=weights_df,
-        check_freq=check_freq,
-        rebalance_type=rebalance_type
+        check_freq=rb_check_freq,
+        rebalance_type=rb_type
     )
+
+
+def get_rebalance_period(date: pd.Timestamp, freq: str) -> Optional[Any]:
+    if freq == 'D':
+        return date
+    elif freq == 'W':
+        return (date.year, date.isocalendar()[1])
+    elif freq == 'M':
+        return (date.year, date.month)
+    elif freq == 'Q':
+        return (date.year, (date.month - 1) // 3)
+    elif freq == 'H':
+        return (date.year, 0 if date.month <= 6 else 1)
+    elif freq == 'Y':
+        return date.year
+    return None
 
 def get_rebalance_settings(name, df_portfolios):
 
