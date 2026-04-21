@@ -72,7 +72,7 @@ def _():
 def _(display, display_df, nat_returns, res):
     # PRINT RESULTS
     from public.src import bt_report as r
-    from public.src import native_report as nr
+    from public.src import report as nr
 
     display(r.portfolio_summary(res))
     display_df(nr.get_stats(nat_returns))

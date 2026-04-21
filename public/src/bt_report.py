@@ -1,6 +1,6 @@
 import pandas as pd
 import plotly.graph_objects as go
-import public.src.native_report as nr
+import public.src.report as nr
 
 def portfolio_summary(res):
 
