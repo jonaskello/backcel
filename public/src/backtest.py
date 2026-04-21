@@ -24,8 +24,8 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
         filtered_portfolio_df = portfolio_df[~portfolio_df.index.astype(str).str.startswith("__")]
 
         # Return dictionaries
-        all_strategies_returns = {}
-        all_strategies_weights = {}
+        all_strategies_returns: dict[str, pd.Series] = {}
+        all_strategies_results: dict[str, PortfolioResult] = {}
 
         for port_name in filtered_portfolio_df.columns:
 
@@ -44,7 +44,7 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
             
             # Store results
             all_strategies_returns[port_name] = port_result.returns
-            all_strategies_weights[port_name] = port_result.weights
+            all_strategies_results[port_name] = port_result
 
         # Combine all returns into a single DataFrame
         combined_returns = pd.DataFrame(all_strategies_returns)
@@ -53,7 +53,7 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
         # return Ok((combined_returns, all_strategies_weights))
         return Ok(BacktestSession(
             combined_returns=combined_returns, 
-            portfolios=all_strategies_weights
+            portfolios=all_strategies_results
         ))
 
     except Exception as e:

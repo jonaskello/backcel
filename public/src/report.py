@@ -2,6 +2,7 @@ import marimo as mo
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+from public.src.backtest import BacktestSession
 
 def get_stats(df):
     stats = {}
@@ -16,8 +17,8 @@ def get_stats(df):
     stats['End'] = end_date
     years = (end_date - start_date).days / 365.25
 
-    stats['Rebalance Check'] = "Yearly"
-    stats['Rebalance Type'] = "Full"
+    stats['RB Check'] = "Yearly"
+    stats['RB Type'] = "Full"
     stats['End'] = end_date
 
 
@@ -180,13 +181,13 @@ def portfolio_drawdown_plot2(wealth_index):
 
     return fig
 
-def show_results(combined_returns):
+def show_results(results: BacktestSession):
     # This will show a table with a row for each portfolio
-    summary_table = get_stats(combined_returns)
+    summary_table = get_stats(results.combined_returns)
     ui_portfolio_table = mo.Html(summary_table.to_html())
 
     # Calculate cumulative growth (1.0 basis)
-    equity_curves = (1 + combined_returns).cumprod()
+    equity_curves = (1 + results.combined_returns).cumprod()
     fig = portfolio_perf(equity_curves)
     plt = portfolio_drawdown_plot2(equity_curves)
 

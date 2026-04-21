@@ -106,25 +106,20 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
             match data_load_result:
                 case Ok(data):
                     portfolio_df, asset_prices_available, assets_meta_df = data
+                    _spinner.update("Running backtest...")
+                    backtest_result = bn.run_backtest_all(asset_prices_available, portfolio_df)
+                    match backtest_result:
+                        case Ok(data):
+                            _spinner.update("Calculating results...")
+                            nr.show_results(data)
+                        case Err(e):
+                            print(f"Error: {e}")
+                            traceback.print_exception(e)
+                            mo.stop(True, f"ERROR: {e}")
                 case Err(e):
                     print(f"Error: {e}")
                     mo.stop(True, f"ERROR: {e}")
 
-            _spinner.update("Running backtest...")
-            backtest_result = bn.run_backtest_all(asset_prices_available, portfolio_df)
-            match backtest_result:
-                case Ok(data):
-                    # combined_returns, weights_per_port= data
-                    combined_returns = data.combined_returns
-                    # Reconstruct the old weights dict for backward compatibility
-                    # weights_per_port = {name: p.weights for name, p in data.portfolios.items()}
-                case Err(e):
-                    print(f"Error: {e}")
-                    traceback.print_exception(e)
-                    mo.stop(True, f"ERROR: {e}")
-
-            _spinner.update("Calculating results...")
-            nr.show_results(combined_returns)
     return
 
 
