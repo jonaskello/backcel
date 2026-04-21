@@ -1,3 +1,6 @@
+import traceback
+
+from public.src.result import Err, Ok
 import pytest
 import pandas as pd
 from pathlib import Path
@@ -21,7 +24,14 @@ async def test_full_engine_run(test_file):
     # Note: load_settings uses test_file as the default container
     data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
 
-    print("Result", data_load_result)    
+
+    match data_load_result:
+        case Ok(data):
+            print("Result", data)    
+        case Err(e):
+            print(f"Error: {e}")
+            traceback.print_exception(e)
+
 
     # # 2. Extract Data (Simplified for the example)
     # # This would call your actual engine: run_backtest(...)
