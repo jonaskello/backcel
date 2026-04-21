@@ -22,9 +22,11 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Build local wheel
+        run: uv build public/
+
       - name: Export Notebook to WASM
-        run: |
-          uv run marimo export html-wasm backtest_notebook.py -o publish/index.html --no-sandbox --force
+        run: uv run marimo export html-wasm backtest_notebook.py -o publish/index.html --no-sandbox --force
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
@@ -40,4 +42,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
