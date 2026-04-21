@@ -122,6 +122,50 @@ def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, band: 
     """Always returns the ideal weights (full reset)."""
     return ideal_weights
 
+def rebalance_sigma2(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band: Any) -> pd.Series:
+    """
+    Surgical rebalance:
+    - Trigger: Drift > 1.0 * sigma
+    - Action: Adjust trigger asset and its opposite counterpart to 0.5 * sigma
+    """
+    # Ensure band is a Series indexed like our assets
+    # If it's a float, we convert it to a Series of the same value for all
+    sigmas = band if isinstance(band, pd.Series) else pd.Series(band, index=ideal_weights.index)
+
+    # 1. Calculate Relative Drift: (Current / Target) - 1
+    drift_pct = (current_weights / ideal_weights) - 1
+    
+    # 2. Check for breach of the 1-sigma rebalance span
+    breaches = drift_pct.abs() > sigmas
+    
+    if not breaches.any():
+        return current_weights
+
+    # 3. Identify the "Trigger" asset (furthest outside its sigma)
+    # We normalize drift by sigma to see who is 'most' outside their limit
+    trigger_asset = (drift_pct.abs() / sigmas).idxmax()
+    
+    # 4. Identify the "Counter" asset (closest to a trigger in the other direction)
+    # If trigger is too high, we find the one most 'underweight' relative to its sigma
+    if drift_pct[trigger_asset] > 0:
+        counter_asset = (drift_pct / sigmas).idxmin()
+    else:
+        counter_asset = (drift_pct / sigmas).idxmax()
+
+    # 5. Execute the adjustment to the Tolerance Band (0.5 * sigma)
+    new_weights = current_weights.copy()
+    
+    # Move trigger asset to 0.5 sigma
+    direction = 1 if drift_pct[trigger_asset] > 0 else -1
+    tolerance_pct = direction * (sigmas[trigger_asset] * 0.5)
+    new_weights[trigger_asset] = ideal_weights[trigger_asset] * (1 + tolerance_pct)
+    
+    # Adjust counter asset to absorb the difference (re-balancing the pair)
+    diff = current_weights[trigger_asset] - new_weights[trigger_asset]
+    new_weights[counter_asset] += diff
+    
+    return new_weights
+
 def rebalance_band(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
     """Returns ideal weights only if the max drift exceeds the band; otherwise returns current."""
     drift = (current_weights - ideal_weights).abs().max()
