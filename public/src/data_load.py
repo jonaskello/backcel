@@ -2,21 +2,44 @@ import pandas as pd
 import os
 import logging
 
-def load_settings(base_dir, settings_file):
-    settings_df = pd.read_excel(os.path.join(base_dir, settings_file), sheet_name='Main')
+import os
+import pandas as pd
 
-    # Get settong fpr currency and dates
+def parse_excel_path(path_str, default_file):
+    """
+    Parses 'file.xlsx!Sheet' or just 'Sheet'.
+    Returns a dictionary for easy DataFrame construction.
+    """
+    path_str = str(path_str).strip()
+    if "!" in path_str:
+        file, sheet = path_str.split("!", 1)
+        return {"file": file.strip(), "sheet": sheet.strip()}
+    
+    # If no '!', assume it's a sheet in the main settings file
+    return {"file": default_file, "sheet": path_str}
+
+def load_settings(base_dir, settings_file):
+    settings_path = os.path.join(base_dir, settings_file)
+    settings_df = pd.read_excel(settings_path, sheet_name='Main')
+
+    # Get settings for currency and dates
     base_currency = settings_df.loc[settings_df['Name'] == 'currency', 'Value'].iloc[0]
     start_date = pd.to_datetime(settings_df.loc[settings_df['Name'] == 'start', 'Value'].iloc[0])
     end_date = pd.to_datetime(settings_df.loc[settings_df['Name'] == 'end', 'Value'].iloc[0])
 
-    # Get portfolio and asset files/sheets from settings
-    portfolio_sheets = settings_df[settings_df['Name'] == 'portfolio_sheet']['Value'].tolist()
-    portfolio_files_df = pd.DataFrame({'file': settings_file, 'sheet': portfolio_sheets})
-    asset_paths = settings_df[settings_df['Name'] == 'assets_file']['Value'].tolist()
-    asset_files_df = pd.DataFrame({'file': asset_paths, 'sheet': 'Main'})
-    # display(asset_files_df)
-    # portfolio_files_df
+    # 1. Parse Portfolio Sources
+    # Supports "Allocations" or "external.xlsx!Allocations"
+    portfolio_raw = settings_df[settings_df['Name'] == 'portfolio_sheet']['Value'].tolist()
+    portfolio_files_df = pd.DataFrame([
+        parse_excel_path(p, settings_file) for p in portfolio_raw
+    ])
+
+    # 2. Parse Asset Sources 
+    # Supports "Assets" or "market_data.xlsx!Main"
+    asset_raw = settings_df[settings_df['Name'] == 'assets_file']['Value'].tolist()
+    asset_files_df = pd.DataFrame([
+        parse_excel_path(a, settings_file) for a in asset_raw
+    ])
 
     return start_date, end_date, base_currency, portfolio_files_df, asset_files_df
 
