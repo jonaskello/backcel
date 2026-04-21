@@ -72,11 +72,9 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     portfolio_returns = []
     historical_weights = []
 
-    # Resolve keys: Use the input if it's valid, otherwise use the default
+    # Resolve period and rebalance functions
     actual_rb_check_freq = str(rb_check_freq).lower().strip() if rb_check_freq in PERIOD_MAPPING else "once"
     actual_rb_type = str(rb_type).lower().strip() if rb_type in REBALANCE_STRATEGIES else "full"
-
-    # Grab the functions (Pylance is happy because keys are now guaranteed)
     get_period = PERIOD_MAPPING[actual_rb_check_freq]
     rb_func = REBALANCE_STRATEGIES[actual_rb_type]
 
