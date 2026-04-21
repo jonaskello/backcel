@@ -14,7 +14,7 @@ class BacktestSession:
     combined_returns: pd.DataFrame
     portfolios: dict[str, PortfolioResult]
 
-def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, band=0.05) -> Result[BacktestSession, Exception]:
+def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, band=0.05) -> Result[BacktestSession, Exception]:
 
     try:
         # Calculate percent change per day
@@ -122,7 +122,7 @@ def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, band: 
     """Always returns the ideal weights (full reset)."""
     return ideal_weights
 
-def rebalance_sigma2(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band: Any) -> pd.Series:
+def rebalance_sigma2(current_weights: pd.Series, ideal_weights: pd.Series, asset_data: pd.DataFrame, band) -> pd.Series:
     """
     Surgical rebalance:
     - Trigger: Drift > 1.0 * sigma

@@ -107,7 +107,7 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
                 case Ok(data):
                     portfolio_df, asset_prices_available, assets_meta_df = data
                     _spinner.update("Running backtest...")
-                    backtest_result = bn.run_backtest_all(asset_prices_available, portfolio_df)
+                    backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
                     match backtest_result:
                         case Ok(data):
                             _spinner.update("Calculating results...")
