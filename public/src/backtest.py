@@ -204,10 +204,10 @@ def get_rebalance_settings(name, df_portfolios):
     return rb_run, rb_type
 
 PERIOD_MAPPING = {
-    'd': period_daily, 'daily': period_daily,
-    'w': period_weekly, 'weekly': period_weekly,
-    'm': period_monthly, 'monthly': period_monthly,
-    'q': period_quarterly, 'quarterly': period_quarterly,
-    'h': period_half_yearly, 'half-year': period_half_yearly, 'semi-annual': period_half_yearly,
-    'y': period_yearly, 'yearly': period_yearly
+    'daily': period_daily,
+    'weekly': period_weekly,
+    'monthly': period_monthly,
+    'quarterly': period_quarterly,
+    'half-year': period_half_yearly,
+    'yearly': period_yearly
 }
