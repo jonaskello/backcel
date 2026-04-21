@@ -12,7 +12,7 @@ The engine follows a "Hub and Spoke" model. Your `main.xlsx` is the hub that poi
 ## 🛠 1. The `main.xlsx` File
 This is the **Required** entry point. It must contain a sheet named `main`.
 
-### The `main` Sheet (Configuration)
+### Main file `main` Sheet (Configuration)
 Use this sheet to define global parameters using a **Name** and **Value** column.
 
 | Name | Value | Description |
@@ -28,10 +28,11 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 
 ---
 
-## 📂 2. Asset Registry (`assets_file`)
-Files defined in the configuration act as a registry. Each must contain a sheet named **`main`** to define asset metadata.
+## 📂 2. Assets (`assets_file`)
 
-### Asset Metadata Columns
+These are the files referenced by the `asset_file` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located. Each file must contain a sheet named **`main`** to define asset metadata.
+
+### Asset `main` sheet Columns
 | Column | Requirement | Description |
 | :--- | :--- | :--- |
 | **ID** | **Required** | Unique identifier (Ticker/ISIN) used in portfolio sheets. |
