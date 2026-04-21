@@ -32,7 +32,6 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
 
             # Get rebalance settings for this portfolio
             rb_check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
-            # rebalance_type = parse_rb_type(port_name, rb_type)
 
             # Get weights for this portfolio
             target_weights = filtered_portfolio_df[port_name].dropna()
