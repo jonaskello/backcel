@@ -29,14 +29,14 @@ def load_settings(base_dir, settings_file):
 
     # 1. Parse Portfolio Sources
     # Supports "Allocations" or "external.xlsx!Allocations"
-    portfolio_raw = settings_df[settings_df['Name'] == 'portfolio_sheet']['Value'].tolist()
+    portfolio_raw = settings_df[settings_df['Name'] == 'portfolios_source']['Value'].tolist()
     portfolio_files_df = pd.DataFrame([
         parse_excel_path(p, settings_file) for p in portfolio_raw
     ])
 
     # 2. Parse Asset Sources 
     # Supports "Assets" or "market_data.xlsx!Main"
-    asset_raw = settings_df[settings_df['Name'] == 'assets_file']['Value'].tolist()
+    asset_raw = settings_df[settings_df['Name'] == 'assets_source']['Value'].tolist()
     asset_files_df = pd.DataFrame([
         parse_excel_path(a, settings_file) for a in asset_raw
     ])
