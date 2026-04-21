@@ -31,10 +31,6 @@ jobs:
       - name: Build local wheel
         run: |
           uv build public/
-          echo "--- Actual Wheel Filename ---"
-          ls public/dist/
-          echo "--- Injected Notebook Line ---"
-          grep "micropip.install" backtest_notebook.py
 
       - name: Export Notebook to WASM
         run: uv run marimo export html-wasm backtest_notebook.py -o publish/index.html --no-sandbox --force
