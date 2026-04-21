@@ -57,7 +57,7 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
         return Err(e) 
 
 
-def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq: str | None, rb_type: str, band) -> PortfolioResult:
+def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq: str | None, rb_type: str | None, band) -> PortfolioResult:
 
     REBALANCE_STRATEGIES = {
         'full': rebalance_full,
