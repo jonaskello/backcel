@@ -12,7 +12,7 @@ excel_test_files = list(TEST_DATA_DIR.glob("test_*.xlsx"))
 @pytest.mark.parametrize("test_file", excel_test_files)
 async def test_full_engine_run(test_file):
 
-    def on_progress(msg: str):
+    async def on_progress(msg: str):
         print(msg)
 
     base_dir = "./public/tests/data"
