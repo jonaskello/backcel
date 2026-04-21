@@ -16,6 +16,11 @@ def get_stats(df):
     stats['End'] = end_date
     years = (end_date - start_date).days / 365.25
 
+    stats['Rebalance Check'] = "Yearly"
+    stats['Rebalance Type'] = "Full"
+    stats['End'] = end_date
+
+
     # Total Return (Arithmetic)
     total_return_factor = (1 + df).prod()
     stats['Total Return %'] = (total_return_factor - 1) * 100

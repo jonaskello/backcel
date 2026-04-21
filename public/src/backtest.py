@@ -1,5 +1,13 @@
 import pandas as pd
+from dataclasses import dataclass
 from public.src.result import Result, Ok, Err
+
+@dataclass(frozen=True)
+class PortfolioResult:
+    returns: pd.Series
+    weights: pd.DataFrame
+    check_freq: str
+    rebalance_type: str
 
 def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, band=0.05) -> Result[tuple[pd.DataFrame, pd.DataFrame], Exception]:
 
@@ -26,11 +34,12 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
             target_weights = filtered_portfolio_df[port_name].dropna()
 
             # Run the backtest - returns a tuple (Series, DataFrame)
-            returns_series, weights_df = run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq, rebalance_type, band)
+            # returns_series, weights_df = run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq, rebalance_type, band)
+            port_result = run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq, rebalance_type, band)
             
             # Store results
-            all_strategies_returns[port_name] = returns_series
-            all_strategies_weights[port_name] = weights_df
+            all_strategies_returns[port_name] = port_result.returns
+            all_strategies_weights[port_name] = port_result.weights
 
         # Combine all returns into a single DataFrame
         combined_returns = pd.DataFrame(all_strategies_returns)
@@ -105,7 +114,15 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_f
     weights_df = pd.DataFrame(historical_weights, index=asset_returns.index)
     weights_df = weights_df.add_prefix(port_name + ">")
 
-    return returns_series, weights_df
+
+    return PortfolioResult(
+        returns=returns_series,
+        weights=weights_df,
+        check_freq=check_freq,
+        rebalance_type=rebalance_type
+    )
+
+    # return returns_series, weights_df
 
 def get_rebalance_settings(name, df_portfolios):
 
