@@ -25,7 +25,7 @@ jobs:
       - name: Inject dynamic wheel version
         run: |
           NEW_VERSION="0.1.0+build.${{ github.run_number }}"
-          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" public/pyproject.toml
           sed -i "s|portfolio_logic-.*-py3-none-any.whl|portfolio_logic-$NEW_VERSION-py3-none-any.whl|g" backtest_notebook.py
 
       - name: Build local wheel
