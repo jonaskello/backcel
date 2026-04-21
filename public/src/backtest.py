@@ -32,13 +32,13 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
 
             # Get rebalance settings for this portfolio
             rb_check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
-            rebalance_type = parse_rb_type(port_name, rb_type)
+            # rebalance_type = parse_rb_type(port_name, rb_type)
 
             # Get weights for this portfolio
             target_weights = filtered_portfolio_df[port_name].dropna()
 
             # Run the backtest - returns a tuple (Series, DataFrame)
-            port_result = run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq, rebalance_type, band)
+            port_result = run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq, rb_type, band)
             
             # Store results
             all_strategies_returns[port_name] = port_result.returns
@@ -80,31 +80,21 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     historical_weights = []
 
     # last_period = None
-    last_period = "INITIAL_STATE"
-    strategy_func = REBALANCE_STRATEGIES.get(rb_type, rebalance_full)
+    last_period = "INITIAL_DUMMY_PERIOD"
+    rb_type_lower = rb_type.lower().strip()
+    strategy_func = REBALANCE_STRATEGIES.get(rb_type_lower, rebalance_full)
 
     for date in asset_returns.index:
         # Rebalance Check
         period = get_rebalance_period(date, rb_check_freq)
 
         if period != last_period:
-            # do_reset = False
-            # if rb_type == 'full':
-            #     do_reset = True
-            # elif rb_type == 'band':
-            #     if (current_weights - target_weights).abs().max() > band:
-            #         do_reset = True
-            
-            # if do_reset:
-            #     current_weights = target_weights.copy()
-
             current_weights = strategy_func(
                 current_weights=current_weights,
                 ideal_weights=target_weights,
                 asset_data=asset_returns.loc[:date],
                 band=band
             )
-
             last_period = period
 
         # Store weights at the start of the day (overnight holdings)
@@ -187,14 +177,4 @@ def get_rebalance_settings(name, df_portfolios):
         rb_type = None
 
     return rb_run, rb_type
-
-def parse_rb_type(name, rb_type):
-
-    if 'sigma' == rb_type:
-        rb_type_algo = "TODO"
-    else:
-        print(f"{name} has unknown rebalance type setting '{rb_type}', defaulting to full")
-        rb_type_algo = 'full'
-
-    return rb_type_algo
 
