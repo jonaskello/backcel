@@ -32,7 +32,6 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
 
             # Get rebalance settings for this portfolio
             rb_check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
-            # check_freq = parse_rb_run(port_name, rb_run)
             rebalance_type = parse_rb_type(port_name, rb_type)
             print(rb_check_freq, rebalance_type)
 
@@ -59,7 +58,7 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
     except Exception as e:
         return Err(e) 
 
-def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq, rb_type, band):
+def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_check_freq: str | None, rb_type: str, band) -> PortfolioResult:
     # Filter asset_returns to ONLY the assets in this specific portfolio
     # This prevents extra columns from appearing in weights_df
     portfolio_assets = target_weights.index
