@@ -10,7 +10,7 @@
 import marimo
 
 __generated_with = "0.23.1"
-app = marimo.App(width="full")
+app = marimo.App(title="Backcel", width="full", description="Portfolio backtesting engine using local Excel files.", show_code=False)
 
 async with app.setup:
     import marimo as mo
