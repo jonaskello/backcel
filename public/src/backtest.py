@@ -72,31 +72,22 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     portfolio_returns = []
     historical_weights = []
 
-    # RESOLVE PERIOD FUNCTION BEFORE THE LOOP
-    # If no freq, use a constant function so period != last_period is only true on day 1
-    freq_key = str(rb_check_freq).lower().strip() if rb_check_freq else "once"
-    get_period = PERIOD_MAPPING.get(freq_key, period_once)
+    # Resolve keys: Use the input if it's valid, otherwise use the default
+    actual_rb_check_freq = str(rb_check_freq).lower().strip() if rb_check_freq in PERIOD_MAPPING else "once"
+    actual_rb_type = str(rb_type).lower().strip() if rb_type in REBALANCE_STRATEGIES else "full"
 
-    # RESOLVE REBALANCE STRATEGY BEFORE THE LOOP
-    rb_type_key = str(rb_type).lower().strip() if rb_type else 'full'
-    rb_func = REBALANCE_STRATEGIES.get(rb_type_key, rebalance_full)
+    # Grab the functions (Pylance is happy because keys are now guaranteed)
+    get_period = PERIOD_MAPPING[actual_rb_check_freq]
+    rb_func = REBALANCE_STRATEGIES[actual_rb_type]
 
-    # last_period = None
+    # Init period so it will trigger first rebalance directly
     last_period = "INITIAL_DUMMY_PERIOD"
-    # rb_type_lower = rb_type.lower().strip()
-    # rb_func = REBALANCE_STRATEGIES.get(rb_type_lower, rebalance_full)
 
     for date in asset_returns.index:
-        # Rebalance Check
-        # period = get_rebalance_period(date, rb_check_freq)
+        # Rebalance
         period = get_period(date)
-
         if period != last_period:
-            current_weights = rb_func(
-                current_weights=current_weights,
-                ideal_weights=target_weights,
-                band=band
-            )
+            current_weights = rb_func(current_weights, target_weights, band)
             last_period = period
 
         # Store weights at the start of the day (overnight holdings)
@@ -122,8 +113,8 @@ def run_backtest_one_portfolio(port_name, asset_returns, target_weights, rb_chec
     return PortfolioResult(
         returns=returns_series,
         weights=weights_df,
-        check_freq=rb_check_freq,
-        rebalance_type=rb_type
+        check_freq=actual_rb_check_freq,
+        rebalance_type=actual_rb_type
     )
 
 def rebalance_full(current_weights: pd.Series, ideal_weights: pd.Series, band: float) -> pd.Series:
