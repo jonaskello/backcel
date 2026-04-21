@@ -21,7 +21,7 @@
 
 ### 🚀 Quick Start
 
-1. **Launch the App**: Open the hosted WASM application in a **Chromium-based browser** (such as Google Chrome, Microsoft Edge, Brave, or Opera, needed for local folders feature).
+1. **Launch the App**: Open the hosted [WASM application](https://jonaskello.github.io/backcel/) in a **Chromium-based browser** (such as Google Chrome, Microsoft Edge, Brave, or Opera, needed for local folders feature).
 2. **Mount Your Data**: Click the **📁 Mount Folder** button to grant the app secure access to your local Excel directory.
 3. **Provide Files**: If you mounted an empty dir, press the **⬇️ Download Example Files** to fill your dir with example files.
 4. **Run Backtest**: Click the **🚀 Run Backtest** button and watch the results generate in real-time.
