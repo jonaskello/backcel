@@ -4,9 +4,11 @@ from pathlib import Path
 from public.src import data_load_main as dlm
 
 # Identify all test workbooks
-TEST_DATA_DIR = Path("public/tests/data")
+CURRENT_DIR = Path(__file__).parent
+TEST_DATA_DIR = CURRENT_DIR / "data"
 excel_test_files = list(TEST_DATA_DIR.glob("test_*.xlsx"))
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize("test_file", excel_test_files)
 async def test_full_engine_run(test_file):
 
