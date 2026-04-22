@@ -18,7 +18,7 @@ The system utilizes four distinct types of Excel sheets to execute the backtest:
 ---
 
 ## 🛠 1. The `main.xlsx` File
-This is the **Required** entry point. It must contain a sheet named `main`.
+This is the **Required** entry point. It must contain a sheet named `Main`.
 
 Use this sheet to define global parameters using a **Name** and **Value** column.
 
