@@ -37,7 +37,7 @@ These are the sheets referenced by the `assets` setting in your `main.xlsx`. The
 | :--- | :--- | :--- |
 | **ID** | **Required** | Unique identifier (Ticker/ISIN) used in portfolio sheets. |
 | **Name** | **Required** | Display name for charts and tables. |
-| **Currency** | **Required** | Currency prices are quoted in (e.g., `USD`). |
+| **Currency** | *Optional* | Currency prices are quoted in (e.g., `USD`). Defaults to base currency from settings. |
 | **Prices** | *Optional* | Sheet name or filename!sheetname, eg. `Stock_Prices` or `Myfile.xlsx!Stock_Prices `. Defaults to `Prices`. |
 | **Proxy** | *Optional* | Asset ID to use if this asset's history is missing. |
 
