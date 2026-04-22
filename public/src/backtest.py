@@ -132,12 +132,6 @@ def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, assets
     # 2. Check for breach of the 1-sigma rebalance span
     breaches = drift_pct.abs() > sigmas
 
-    # DEBUG
-    if breaches.any():
-        print(f"BREACH TRIGGERED on {current_weights.name}!")
-        print(f"Drift: {drift_pct[breaches]}")
-        print(f"Sigma: {sigmas[breaches]}")
-
     if not breaches.any():
         return current_weights
 
