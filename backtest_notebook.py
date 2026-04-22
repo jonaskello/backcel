@@ -27,9 +27,9 @@ async with app.setup:
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    ## 📊 Beckcel
+    ## 📊 Backcel
 
-    Welcome to beckcel, the local excel based portfolio backtesting engine! To get started:
+    Welcome to backcel, the local excel based portfolio backtesting engine! To get started:
 
     1. Use a compatible browser: ✅ Chrome, Edge, Brave, Opera. ❌ Safari or Firefox are not supported.
     1. Create an empty folder on your drive and press the **📁 Mount Folder** button below to mount it.
