@@ -13,14 +13,13 @@ The system utilizes four distinct types of Excel sheets to execute the backtest:
 * **Main:** This sheet is the global settings for the backtest such as start and end date. It also points to all other sheets.
 * **Asset Registry:** This type of sheet holds information about assets such as ID and name, and points to prices for each asset.
 * **Asset Prices:** This type of sheet holds time-series pricing data for the assets.
-* **Portfolio Config Sheet:** This type of sheet defines the weights and rebalancing for portfolios to backtest..
+* **Portfolio Definitions:** This type of sheet defines the weights and rebalancing for portfolios to backtest..
 
 ---
 
 ## 🛠 1. The `main.xlsx` File
 This is the **Required** entry point. It must contain a sheet named `main`.
 
-### Main file `main` Sheet (Configuration)
 Use this sheet to define global parameters using a **Name** and **Value** column.
 
 | Name | Value | Description |
@@ -59,7 +58,7 @@ These are the sheets referenced by the `Assets` setting in your `main.xlsx`. The
 
 ---
 
-## 📈 3. Historical Price Data
+## 📈 3. Asset Prices
 These are the sheets referenced by the `Prices` setting in your asset registry sheets. They store the time-series data.
 
 ### Sheet Structure
