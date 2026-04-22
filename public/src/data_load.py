@@ -106,29 +106,22 @@ def assets_meta(base_dir, files_df, base_currency):
         
         meta_df = meta_df[meta_df.index.notna()]
 
-        # --- Handle Currency ---
-        if 'currency' not in meta_df.columns:
-            meta_df['currency'] = base_currency
+        # --- Handle "prices" column -> file and sheet ---
+        if 'prices' in meta_df.columns:
+            # Parse each row (handles "file.xlsx!Sheet" or just "Sheet")
+            parsed = meta_df['prices'].apply(lambda x: parse_excel_path(x, row.file) if pd.notna(x) else None)
+            meta_df['file'] = parsed.apply(lambda x: x['file'] if x else row.file)
+            meta_df['sheet'] = parsed.apply(lambda x: x['sheet'] if x else default_prices_sheet_name)
         else:
-            meta_df['currency'] = meta_df['currency'].fillna(base_currency)
-
-        # --- Handle Proxy ---
-        if 'proxy' not in meta_df.columns:
-            meta_df['proxy'] = ""
-        else:
-            meta_df['proxy'] = meta_df['proxy'].fillna("")
-
-        # Set default 'file' if column missing or has empty values
-        if 'file' not in meta_df.columns:
             meta_df['file'] = row.file
-        else:
-            meta_df['file'] = meta_df['file'].fillna(row.file)
-
-        # Set default 'sheet' if column missing or has empty values
-        if 'sheet' not in meta_df.columns:
             meta_df['sheet'] = default_prices_sheet_name
-        else:
-            meta_df['sheet'] = meta_df['sheet'].fillna(default_prices_sheet_name)
+
+        # --- Handle Currency and Proxy defaults ---
+        meta_df['currency'] = meta_df['currency'] if 'currency' in meta_df.columns else base_currency
+        meta_df['currency'] = meta_df['currency'].fillna(base_currency)
+
+        meta_df['proxy'] = meta_df['proxy'] if 'proxy' in meta_df.columns else ""
+        meta_df['proxy'] = meta_df['proxy'].fillna("")
         
         missing = [c for c in required_cols if c not in meta_df.columns]
         if missing:
@@ -146,7 +139,7 @@ def assets_meta(base_dir, files_df, base_currency):
         print(f"❌ Error: Duplicate IDs found across different files/sheets: {total_dupes}")
 
     if 'proxy' in combined_df.columns:
-        proxies_used = combined_df['proxy'].dropna().unique()
+        proxies_used = [p for p in combined_df['proxy'].unique() if pd.notna(p) and str(p).strip() != ""]
         invalid_proxies = [p for p in proxies_used if p not in combined_df.index]
         if invalid_proxies:
             print(f"❌ Error: Proxies defined but not found in ID column: {invalid_proxies}")
