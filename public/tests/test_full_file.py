@@ -6,6 +6,7 @@ from public.src.result import Err, Ok
 from pathlib import Path
 from public.src import data_load_main as dlm
 from public.src import backtest as bn
+from public.src import report as r
 
 # Identify all test workbooks
 CURRENT_DIR = Path(__file__).parent
@@ -21,33 +22,37 @@ async def test_full_engine_run(test_file):
 
     base_dir = "./public/tests/data"
     data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
-    expected_portfolio_values, expected_portfolio_weights = await load_expected(base_dir, test_file)
-    print("expected_portfolio_weights",expected_portfolio_weights.columns)
+    expected_values, expected_weights, expected_stats = await load_expected(base_dir, test_file)
     match data_load_result:
-        case Ok(data):
-            portfolio_df, asset_prices_available, assets_meta_df = data
+        case Ok(actual):
+            portfolio_df, asset_prices_available, assets_meta_df = actual
             backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
             match backtest_result:
-                case Ok(data):
+                case Ok(actual):
                     # Calculate cumulative growth (1.0 basis)
-                    portfolio_values = (1 + data.combined_returns).cumprod()
+                    portfolio_values = (1 + actual.combined_returns).cumprod()
                     # print("portfolio_values", portfolio_values)
                     # print("Results", data)
                     print("portfolio_values.columns", portfolio_values.columns)
-                    print("expected_portfolio_values.columns", expected_portfolio_values.columns)
+                    print("expected_portfolio_values.columns", expected_values.columns)
                     # Compare your backtest result to the 'Expected' sheet
-                    pd.testing.assert_frame_equal(portfolio_values, expected_portfolio_values)
+                    pd.testing.assert_frame_equal(portfolio_values, expected_values)
 
-                    for p_name, p_result in data.portfolios.items():
+                    for p_name, p_result in actual.portfolios.items():
                         # expected_weights_df has MultiIndex columns (Portfolio, Asset)
-                        expected_p_weights = expected_portfolio_weights[[p_name]]
-                        expected_p_weights = expected_portfolio_weights[[p_name]].droplevel(0, axis=1)
+                        expected_p_weights = expected_weights[[p_name]]
+                        expected_p_weights = expected_weights[[p_name]].droplevel(0, axis=1)
                         pd.testing.assert_frame_equal(
                             p_result.weights, 
                             expected_p_weights, 
                             obj=f"Weights Mismatch for Portfolio: {p_name}",
                             atol=1e-5
                         )
+                    # Compare your backtest result to the 'Expected' sheet
+                    actual_stats = r.get_stats(actual)
+                    print("actual_stats",actual_stats)
+                    pd.testing.assert_frame_equal(actual_stats, expected_stats)
+
 
                 case Err(e):
                     print(f"Error: {e}")
@@ -57,7 +62,8 @@ async def test_full_engine_run(test_file):
 
 async def load_expected(base_dir, test_file):
     file_path = os.path.join(base_dir, test_file)
-    expected_portfolio_values = pd.read_excel(file_path, sheet_name='Expected_Values', index_col=0)
-    expected_portfolio_weights = pd.read_excel(file_path, sheet_name='Expected_Weights', header=[0, 1], index_col=0).astype(float)
-    expected_portfolio_weights.index.name = 'Date'
-    return expected_portfolio_values, expected_portfolio_weights
+    expected_values = pd.read_excel(file_path, sheet_name='Expected_Values', index_col=0)
+    expected_weights = pd.read_excel(file_path, sheet_name='Expected_Weights', header=[0, 1], index_col=0).astype(float)
+    expected_weights.index.name = 'Date'
+    expected_stats = pd.read_excel(file_path, sheet_name='Expected_Stats', index_col=0)
+    return expected_values, expected_weights, expected_stats
