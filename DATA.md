@@ -47,6 +47,7 @@ These are the sheets referenced by the `Assets` setting in the `Main` sheet. The
 | **Currency** | *Optional* | Currency prices are quoted in (e.g., `USD`). Defaults to base currency from settings. |
 | **Prices** | *Optional* | Sheet name or `Filename!Sheetname` for location of prices, eg. `Stock_Prices` or `Myfile.xlsx!Stock_Prices `. Defaults to `Prices`. |
 | **Proxy** | *Optional* | Asset ID to use if this asset's history is missing. |
+| **StdDev** | *Optional* | Standard Deviation, used for some rebalancing types. Defaults to 10% |
 
 > [!TIP] 
 > * **Custom Organization & Metadata**: 
