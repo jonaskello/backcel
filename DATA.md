@@ -20,8 +20,8 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 | **Currency** | `SEK` | The base currency for all final reports. |
 | **Start** | `2012-05-12` | The starting date for the simulation. |
 | **End** | `2015-07-23` | The ending date for the simulation. |
-| **Portfolios**| `Portfolios.xlsx!Tech_Stocks` | Sheet name or filename!sheetname for weights, eg. `Tech_Stocks` or `Portfolios.xlsx!Tech_Stocks`. (Repeatable). |
-| **Assets** | `Assets.xlsx!Stocks` | Sheet name or filename!sheetname for asset metadata/prices, eg. `Stocks` or `Assets.xlsx!Stocks `. (Repeatable). |
+| **Portfolios**| `Portfolios.xlsx!Tech_Stocks` | Sheet name or `Filename!Sheetname` for weights, eg. `Tech_Stocks` or `Portfolios.xlsx!Tech_Stocks`. (Repeatable). |
+| **Assets** | `Assets.xlsx!Stocks` | Sheet name or `Filename!Sheetname` for asset metadata/prices, eg. `Stocks` or `Assets.xlsx!Stocks `. (Repeatable). |
 
 > [!TIP] 
 > Setting names starting with underscore (`_`) will be ignored. This can be used to disable settings without removing them.
@@ -38,7 +38,7 @@ These are the sheets referenced by the `assets` setting in your `main.xlsx`. The
 | **ID** | **Required** | Unique identifier (Ticker/ISIN) used in portfolio sheets. |
 | **Name** | **Required** | Display name for charts and tables. |
 | **Currency** | *Optional* | Currency prices are quoted in (e.g., `USD`). Defaults to base currency from settings. |
-| **Prices** | *Optional* | Sheet name or filename!sheetname, eg. `Stock_Prices` or `Myfile.xlsx!Stock_Prices `. Defaults to `Prices`. |
+| **Prices** | *Optional* | Sheet name or `Filename!Sheetname` for location of prices, eg. `Stock_Prices` or `Myfile.xlsx!Stock_Prices `. Defaults to `Prices`. |
 | **Proxy** | *Optional* | Asset ID to use if this asset's history is missing. |
 
 > [!TIP] 
