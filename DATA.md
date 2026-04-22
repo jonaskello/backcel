@@ -37,7 +37,7 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 
 ## 📂 2. Assets Registry
 
-These are the sheets referenced by the `Assets` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located.
+These are the sheets referenced by the `Assets` setting in the `Main` sheet. They define the main information about the assets, and points to where the prices for each asset is located.
 
 ### Asset sheet Columns
 | Column | Requirement | Description |
