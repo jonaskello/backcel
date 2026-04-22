@@ -73,8 +73,6 @@ async def _(dlm, download_btn, fm, get_base_path, os):
     from public.src import data_load as dl
 
     base_dir = get_base_path()
-    # mo.stop(base_dir == "", mo.vstack([mo.md("To get started, click the button above to mount a folder."),
-    #                                    mo.md("It can be an empty folder or a folder with a main file.")]))
     mo.stop(base_dir == "")
 
     settings_file_path = os.path.join(base_dir, dlm.get_settings_file_name())
