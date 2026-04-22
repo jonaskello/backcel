@@ -5,14 +5,21 @@ This guide explains how to structure your Excel files for successful backtests.
 ---
 
 ## 🏗 Document Hierarchy
-The engine follows a "Hub and Spoke" model. Your `main.xlsx` is the hub that points to all other data sources.
+The engine follows a **"Hub and Spoke"** model, where `main.xlsx` serves as the central hub connecting all data sources.
+
+### 📄 Sheet Classifications
+The system utilizes four distinct types of Excel sheets to execute the backtest:
+
+* **Main:** This sheet is the global settings for the backtest such as start and end date. It also points to all other sheets.
+* **Asset Registry:** This type of sheet holds information about assets such as ID and name, and points to prices for each asset.
+* **Asset Prices:** This type of sheet holds time-series pricing data for the assets.
+* **Portfolio Definitions:** This type of sheet defines the weights and rebalancing for portfolios to backtest..
 
 ---
 
 ## 🛠 1. The `main.xlsx` File
-This is the **Required** entry point. It must contain a sheet named `main`.
+This is the **Required** entry point. It must contain a sheet named `Main`.
 
-### Main file `main` Sheet (Configuration)
 Use this sheet to define global parameters using a **Name** and **Value** column.
 
 | Name | Value | Description |
@@ -30,7 +37,7 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 
 ## 📂 2. Assets Registry
 
-These are the sheets referenced by the `Assets` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located.
+These are the sheets referenced by the `Assets` setting in the `Main` sheet. They define the main information about the assets, and points to where the prices for each asset is located.
 
 ### Asset sheet Columns
 | Column | Requirement | Description |
@@ -40,6 +47,7 @@ These are the sheets referenced by the `Assets` setting in your `main.xlsx`. The
 | **Currency** | *Optional* | Currency prices are quoted in (e.g., `USD`). Defaults to base currency from settings. |
 | **Prices** | *Optional* | Sheet name or `Filename!Sheetname` for location of prices, eg. `Stock_Prices` or `Myfile.xlsx!Stock_Prices `. Defaults to `Prices`. |
 | **Proxy** | *Optional* | Asset ID to use if this asset's history is missing. |
+| **StdDev** | *Optional* | Standard Deviation, used for some rebalancing types. Defaults to 10% |
 
 > [!TIP] 
 > * **Custom Organization & Metadata**: 
@@ -51,7 +59,7 @@ These are the sheets referenced by the `Assets` setting in your `main.xlsx`. The
 
 ---
 
-## 📈 3. Historical Price Data
+## 📈 3. Asset Prices
 These are the sheets referenced by the `Prices` setting in your asset registry sheets. They store the time-series data.
 
 ### Sheet Structure

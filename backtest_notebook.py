@@ -30,10 +30,12 @@ def _():
     ## 📊 Beckcel
 
     Welcome to beckcel, the local excel based portfolio backtesting engine! To get started:
+
+    1. Use a compatible browser: ✅ Chrome, Edge, Brave, Opera. ❌ Safari or Firefox are not supported.
     1. Create an empty folder on your drive and press the **📁 Mount Folder** button below to mount it.
-    2. Press the **⬇️ Download Example Files** button that appears to fill your folder with example files.
-    3. Press the **🚀 Run Backtest** button to run the backtest.
-    4. Open the `main.xlsx` file and in the `Main` sheet change the `start_date` setting. Save the file in excel, and then press the **🚀 Run Backtest** button again to run with the new settings.
+    1. Press the **⬇️ Download Example Files** button that appears to fill your folder with example files.
+    1. Press the **🚀 Run Backtest** button to run the backtest.
+    1. Open the 📄 `main.xlsx` file and in the `Main` sheet change the `start_date` setting. Save the file in excel, and then press the **🚀 Run Backtest** button again to run with the new settings.
 
     _Note: All data stays on your machine; no files are uploaded to a server._ For information about the format of the excel files see [data docs](https://github.com/jonaskello/backcel/blob/main/DATA.md) or the [source code](https://github.com/jonaskello/backcel).
     """)

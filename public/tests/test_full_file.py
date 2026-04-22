@@ -34,11 +34,7 @@ async def test_full_engine_run(test_file):
             backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
             match backtest_result:
                 case Ok(actual):
-                    # Calculate cumulative growth (1.0 basis)
-                    portfolio_values = (1 + actual.combined_returns).cumprod()
-                    # Compare your backtest result to the 'Expected' sheet
-                    pd.testing.assert_frame_equal(portfolio_values, expected_values)
-
+                    # Assert weights
                     for p_name, p_result in actual.portfolios.items():
                         # expected_weights_df has MultiIndex columns (Portfolio, Asset)
                         expected_p_weights = expected_weights[[p_name]]
@@ -49,7 +45,12 @@ async def test_full_engine_run(test_file):
                             obj=f"Weights Mismatch for Portfolio: {p_name}",
                             atol=1e-5
                         )
-                    # Compare your backtest result to the 'Expected' sheet
+
+                    # Assert cumulative growth (1.0 basis)
+                    portfolio_values = (1 + actual.combined_returns).cumprod()
+                    pd.testing.assert_frame_equal(portfolio_values, expected_values)
+
+                    # Assert stats
                     actual_stats = r.get_stats(actual)
                     pd.testing.assert_frame_equal(actual_stats, expected_stats)
 
@@ -63,9 +64,11 @@ async def test_full_engine_run(test_file):
 async def load_expected(base_dir, test_file):
     file_path = os.path.join(base_dir, test_file)
     expected_values = pd.read_excel(file_path, sheet_name='Expected_Values', index_col=0)
-    expected_weights = pd.read_excel(file_path, sheet_name='Expected_Weights', header=[0, 1], index_col=0).astype(float)
+    expected_weights = pd.read_excel(file_path, sheet_name='Expected_Weights', header=[0, 1], index_col=0)
+    expected_weights_cols_numeric_cols = expected_weights.select_dtypes(include=['number']).columns
+    expected_weights[expected_weights_cols_numeric_cols] = expected_weights[expected_weights_cols_numeric_cols].astype(float)
     expected_weights.index.name = 'Date'
     expected_stats = pd.read_excel(file_path, sheet_name='Expected_Stats', index_col=0)
-    stats_numeric_cols = expected_stats.select_dtypes(include=['number']).columns
-    expected_stats[stats_numeric_cols] = expected_stats[stats_numeric_cols].astype(float)
+    expected_stats_numeric_cols = expected_stats.select_dtypes(include=['number']).columns
+    expected_stats[expected_stats_numeric_cols] = expected_stats[expected_stats_numeric_cols].astype(float)
     return expected_values, expected_weights, expected_stats
