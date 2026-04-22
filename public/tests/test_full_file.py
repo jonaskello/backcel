@@ -72,4 +72,6 @@ async def load_expected(base_dir, test_file):
     expected_weights = pd.read_excel(file_path, sheet_name='Expected_Weights', header=[0, 1], index_col=0).astype(float)
     expected_weights.index.name = 'Date'
     expected_stats = pd.read_excel(file_path, sheet_name='Expected_Stats', index_col=0)
+    stats_numeric_cols = expected_stats.select_dtypes(include=['number']).columns
+    expected_stats[stats_numeric_cols] = expected_stats[stats_numeric_cols].astype(float)
     return expected_values, expected_weights, expected_stats
