@@ -17,8 +17,6 @@ def get_settings_file_name() -> str:
 def get_local_base_dir() -> str:
     return os.environ.get("DATA_PATH", "public/example")
 
-
-
 async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
     await on_progress("Loading assets...")
     data_load_result = await data_load_all(base_dir, on_progress, settings_file_path)
