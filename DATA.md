@@ -39,8 +39,7 @@ These are the files referenced by the `asset_file` setting in your `main.xlsx`. 
 | **Name** | **Required** | Display name for charts and tables. |
 | **Currency** | **Required** | Currency prices are quoted in (e.g., `USD`). |
 | **Proxy** | *Optional* | Asset ID to use if this asset's history is missing. |
-| **File** | *Optional* | `.xlsx` file where prices live. Defaults to current file. |
-| **Sheet** | *Optional* | Sheet name for price data. Defaults to `Prices`. |
+| **Prices** | *Optional* | Sheet name or filename!sheetname, eg. `Stock_Prices` or `Myfile.xlsx!Stock_Prices `. Defaults to `Prices`. |
 
 > [!TIP] 
 > * **Custom Organization & Metadata**: 
