@@ -65,6 +65,8 @@ def get_stats(results: BacktestSession):
     # Avg Drawdown
     def calc_avg_dd(series):
         is_in_dd = series < 0
+        if not is_in_dd.any():
+            return 0.0
         groups = (is_in_dd != is_in_dd.shift()).cumsum()
         # Find the minimum (worst) point of each drawdown group
         drawdown_depths = series[is_in_dd].groupby(groups).min()
