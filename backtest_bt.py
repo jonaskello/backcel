@@ -8,7 +8,7 @@ app = marimo.App()
 async def _():
     import marimo as mo
     import os
-    from public.src import data_load_main as dlm
+    from public.src import main as dlm
 
     def display(obj):
         mo.output.append(obj)
