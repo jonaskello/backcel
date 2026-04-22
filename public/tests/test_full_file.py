@@ -34,11 +34,7 @@ async def test_full_engine_run(test_file):
             backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
             match backtest_result:
                 case Ok(actual):
-                    # Calculate cumulative growth (1.0 basis)
-                    portfolio_values = (1 + actual.combined_returns).cumprod()
-                    # Compare your backtest result to the 'Expected' sheet
-                    pd.testing.assert_frame_equal(portfolio_values, expected_values)
-
+                    # Assert weights
                     for p_name, p_result in actual.portfolios.items():
                         # expected_weights_df has MultiIndex columns (Portfolio, Asset)
                         expected_p_weights = expected_weights[[p_name]]
@@ -49,7 +45,12 @@ async def test_full_engine_run(test_file):
                             obj=f"Weights Mismatch for Portfolio: {p_name}",
                             atol=1e-5
                         )
-                    # Compare your backtest result to the 'Expected' sheet
+
+                    # Assert cumulative growth (1.0 basis)
+                    portfolio_values = (1 + actual.combined_returns).cumprod()
+                    pd.testing.assert_frame_equal(portfolio_values, expected_values)
+
+                    # Assert stats
                     actual_stats = r.get_stats(actual)
                     pd.testing.assert_frame_equal(actual_stats, expected_stats)
 
