@@ -28,9 +28,9 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 
 ---
 
-## 📂 2. Assets (`assets`)
+## 📂 2. Assets Registry
 
-These are the sheets referenced by the `assets` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located.
+These are the sheets referenced by the `Assets` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located.
 
 ### Asset sheet Columns
 | Column | Requirement | Description |
@@ -52,7 +52,7 @@ These are the sheets referenced by the `assets` setting in your `main.xlsx`. The
 ---
 
 ## 📈 3. Historical Price Data
-Price sheets (defaulting to name `Prices`) store the time-series data.
+These are the sheets referenced by the `Prices` setting in your asset registry sheets. They store the time-series data.
 
 ### Sheet Structure
 * **Date**: The first column must contain the price dates.
@@ -68,7 +68,7 @@ Price sheets (defaulting to name `Prices`) store the time-series data.
 > 
 > For example: `=STOCKHISTORY("AAPL", "2023-01-01", "2023-12-31", 0, 1, 0, 1)`
 > 
-> This is a highly efficient way to build your `assets_file`. Since Excel saves the last fetched values directly in the file, the backtester can read these results as normal data. This allows you to keep your formulas active so you can easily update your backtest range or assets later.
+> Since Excel saves the last fetched values directly in the file, the backtester can read these results as normal data. This allows you to keep your formulas active so you can easily update your backtest range or assets later.
 
 ---
 
@@ -85,7 +85,7 @@ These are the sheets referenced by the `Portfolios` setting in your `main.xlsx`.
 ---
 
 ### ⚙️ Rebalancing Settings
-Use these **Special ID Rows** to control how allocations are maintained. Settings are per-column; missing values use defaults.
+Use these **Special ID Rows** to control how allocations are maintained. Settings are per-column; missing or invalid values use defaults.
 
 #### 1. Evaluation Schedule (`__rb_check`)
 Determines how often the engine checks for portfolio drift.
@@ -94,7 +94,7 @@ Determines how often the engine checks for portfolio drift.
 #### 2. Execution Logic (`__rb_type`)
 Determines how trades are triggered and sized.
 
-* **`full`** – **Total Realignment**: Every check, all assets are traded back to their exact target weights.
+* **`full`** – (Default) **Total Realignment**: Every check, all assets are traded back to their exact target weights.
 * **`sigma`** – **Volatility-Based**: Triggered only when an asset drifts beyond its annual $StdDev$ (defined in the Asset Registry). It rebalances outliers back to within a $0.5 \times StdDev$ target buffer.
 
 ---
