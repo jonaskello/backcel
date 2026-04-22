@@ -36,10 +36,6 @@ async def test_full_engine_run(test_file):
                 case Ok(actual):
                     # Calculate cumulative growth (1.0 basis)
                     portfolio_values = (1 + actual.combined_returns).cumprod()
-                    # print("portfolio_values", portfolio_values)
-                    # print("Results", data)
-                    print("portfolio_values.columns", portfolio_values.columns)
-                    print("expected_portfolio_values.columns", expected_values.columns)
                     # Compare your backtest result to the 'Expected' sheet
                     pd.testing.assert_frame_equal(portfolio_values, expected_values)
 
@@ -55,9 +51,7 @@ async def test_full_engine_run(test_file):
                         )
                     # Compare your backtest result to the 'Expected' sheet
                     actual_stats = r.get_stats(actual)
-                    print("actual_stats",actual_stats)
                     pd.testing.assert_frame_equal(actual_stats, expected_stats)
-
 
                 case Err(e):
                     pytest.fail(f"Error: {e}")
