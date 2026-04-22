@@ -83,8 +83,10 @@ def get_stats(results: BacktestSession):
     stats['Max Drawdown Period'] = drawdowns.apply(calc_max_dd_days)
 
     # Format result
-    result = pd.DataFrame(stats).round(2)
-    
+    result = pd.DataFrame(stats)
+    numeric_cols = result.select_dtypes(include=[np.number]).columns
+    result[numeric_cols] = result[numeric_cols].round(2)
+
     # Convert days to years string if > 365
     result['Max Drawdown Period'] = result['Max Drawdown Period'].apply(
         lambda x: f"{round(x/365.25, 2)} years" if x > 365 else f"{int(x)} days"
