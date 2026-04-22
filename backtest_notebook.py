@@ -87,8 +87,8 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
     # RUN BACKTEST
 
     import traceback
-    import public.src.backtest as bn
-    import public.src.report as nr
+    from public.src import backtest as bn
+    from public.src import report as nr
     from public.src.result import Ok, Err
 
     if run_btn.value:
@@ -107,7 +107,7 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
                 case Ok(data):
                     portfolio_df, asset_prices_available, assets_meta_df = data
                     _spinner.update("Running backtest...")
-                    backtest_result = bn.run_backtest_all(asset_prices_available, portfolio_df)
+                    backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
                     match backtest_result:
                         case Ok(data):
                             _spinner.update("Calculating results...")
@@ -119,7 +119,6 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
                 case Err(e):
                     print(f"Error: {e}")
                     mo.stop(True, f"ERROR: {e}")
-
     return
 
 

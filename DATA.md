@@ -17,30 +17,29 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 
 | Name | Value | Description |
 | :--- | :--- | :--- |
-| **currency** | `SEK` | The base currency for all final reports. |
-| **start** | `2012-05-12` | The starting date for the simulation. |
-| **end** | `2015-07-23` | The ending date for the simulation. |
-| **portfolio_sheet**| `Strategy_A` | Sheet name in `main.xlsx` for weights. (Repeatable). |
-| **assets_file** | `Assets.xlsx` | External file for asset metadata/prices. (Repeatable). |
+| **Currency** | `SEK` | The base currency for all final reports. |
+| **Start** | `2012-05-12` | The starting date for the simulation. |
+| **End** | `2015-07-23` | The ending date for the simulation. |
+| **Portfolios**| `Portfolios.xlsx!Tech_Stocks` | Sheet name or `Filename!Sheetname` for weights, eg. `Tech_Stocks` or `Portfolios.xlsx!Tech_Stocks`. (Repeatable). |
+| **Assets** | `Assets.xlsx!Stocks` | Sheet name or `Filename!Sheetname` for asset metadata/prices, eg. `Stocks` or `Assets.xlsx!Stocks `. (Repeatable). |
 
 > [!TIP] 
 > Setting names starting with underscore (`_`) will be ignored. This can be used to disable settings without removing them.
 
 ---
 
-## 📂 2. Assets (`assets_file`)
+## 📂 2. Assets (`assets`)
 
-These are the files referenced by the `asset_file` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located. Each file must contain a sheet named **`main`** to define asset metadata.
+These are the sheets referenced by the `assets` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located.
 
-### Asset `main` sheet Columns
+### Asset sheet Columns
 | Column | Requirement | Description |
 | :--- | :--- | :--- |
 | **ID** | **Required** | Unique identifier (Ticker/ISIN) used in portfolio sheets. |
 | **Name** | **Required** | Display name for charts and tables. |
-| **Currency** | **Required** | Currency prices are quoted in (e.g., `USD`). |
+| **Currency** | *Optional* | Currency prices are quoted in (e.g., `USD`). Defaults to base currency from settings. |
+| **Prices** | *Optional* | Sheet name or `Filename!Sheetname` for location of prices, eg. `Stock_Prices` or `Myfile.xlsx!Stock_Prices `. Defaults to `Prices`. |
 | **Proxy** | *Optional* | Asset ID to use if this asset's history is missing. |
-| **File** | *Optional* | `.xlsx` file where prices live. Defaults to current file. |
-| **Sheet** | *Optional* | Sheet name for price data. Defaults to `Prices`. |
 
 > [!TIP] 
 > * **Custom Organization & Metadata**: 
@@ -75,7 +74,7 @@ Price sheets (defaulting to name `Prices`) store the time-series data.
 
 ## 💼 4. Portfolio Definitions
 
-These are the sheets referenced by the `portfolio_sheet` setting in your `main.xlsx`. They define the specific weights and allocations for your simulation.
+These are the sheets referenced by the `Portfolios` setting in your `main.xlsx`. They define the specific weights and allocations for your simulation.
 
 ### Sheet Structure
 The sheet must follow a column-based format where each column (after the ID) represents a distinct portfolio strategy.

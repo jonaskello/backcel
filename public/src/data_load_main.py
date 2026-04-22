@@ -31,7 +31,7 @@ async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tup
         # display(portfolio_df.fillna(''))
 
         # LOAD ASSETS META (filtered to the ones needed by portfolios)
-        assets_meta_all = dl.assets_meta(base_dir, asset_files_df)
+        assets_meta_all = dl.assets_meta(base_dir, asset_files_df, base_currency)
         needed_asset_ids, needed_currency_ids = dc.resolve_asset_dependencies(portfolio_df.index.unique(), assets_meta_all, base_currency)
         # display(needed_asset_ids)
         # display(needed_currency_ids)

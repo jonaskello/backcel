@@ -14,7 +14,7 @@ class BacktestSession:
     combined_returns: pd.DataFrame
     portfolios: dict[str, PortfolioResult]
 
-def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, band=0.05) -> Result[BacktestSession, Exception]:
+def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame) -> Result[BacktestSession, Exception]:
 
     try:
         # Calculate percent change per day
@@ -30,17 +30,13 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
         for port_name in filtered_portfolio_df.columns:
 
             # Get rebalance settings for this portfolio
-            rb_run, rb_type = get_rebalance_settings(port_name, portfolio_df)
-            check_freq = parse_rb_run(port_name, rb_run)
-            rebalance_type = parse_rb_type(port_name, rb_type)
-            print(check_freq, rebalance_type)
+            rb_check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
 
             # Get weights for this portfolio
             target_weights = filtered_portfolio_df[port_name].dropna()
 
             # Run the backtest - returns a tuple (Series, DataFrame)
-            # returns_series, weights_df = run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq, rebalance_type, band)
-            port_result = run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq, rebalance_type, band)
+            port_result = run_backtest_one_portfolio(port_name, assets_meta_df, asset_returns, target_weights, rb_check_freq, rb_type)
             
             # Store results
             all_strategies_returns[port_name] = port_result.returns
@@ -59,77 +55,131 @@ def run_backtest_all(asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame, ban
     except Exception as e:
         return Err(e) 
 
-def run_backtest_one_portfolio(port_name, asset_returns, target_weights, check_freq='Y', rebalance_type='full', band=0.05):
-    # Filter asset_returns to ONLY the assets in this specific portfolio
-    # This prevents extra columns from appearing in weights_df
+
+def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, asset_returns: pd.DataFrame, target_weights, rb_check_freq: str | None, rb_type: str | None) -> PortfolioResult:
+
     portfolio_assets = target_weights.index
-    
     missing = set(portfolio_assets) - set(asset_returns.columns)
     if missing:
         raise ValueError(f"Portfolio '{port_name}' has assets missing from price data: {missing}")
 
-    asset_returns = asset_returns[portfolio_assets]
+    # Filter asset_returns to ONLY the assets in this specific portfolio
+    asset_returns_portfolio = asset_returns[portfolio_assets]
+    assets_meta_portfolio = assets_meta_df.reindex(portfolio_assets)
+
     current_weights = target_weights.copy()
     portfolio_returns = []
     historical_weights = []
 
-    last_period = None
+    # Resolve period and rebalance functions
+    actual_rb_check_freq = str(rb_check_freq).lower().strip() if rb_check_freq in PERIOD_MAPPING else "once"
+    actual_rb_type = str(rb_type).lower().strip() if rb_type in REBALANCE_STRATEGIES else "full"
+    get_period = PERIOD_MAPPING[actual_rb_check_freq]
+    rb_func = REBALANCE_STRATEGIES[actual_rb_type]
 
-    for date in asset_returns.index:
-        # Rebalance Check
-        if check_freq == 'D':
-            period = date
-        elif check_freq == 'W':
-            period = (date.year, date.isocalendar()[1])
-        elif check_freq == 'M':
-            period = (date.year, date.month)
-        elif check_freq == 'Q':
-            period = (date.year, (date.month - 1) // 3)
-        elif check_freq == 'H':
-            period = (date.year, 0 if date.month <= 6 else 1)
-        elif check_freq == 'Y':
-            period = date.year
-        else:
-            period = None
+    # Init period so it will trigger first rebalance directly
+    last_period = "INITIAL_DUMMY_PERIOD"
 
+    for date in asset_returns_portfolio.index:
+        # Rebalance
+        period = get_period(date)
         if period != last_period:
-            do_reset = False
-            if rebalance_type == 'full':
-                do_reset = True
-            elif rebalance_type == 'band':
-                if (current_weights - target_weights).abs().max() > band:
-                    do_reset = True
-            
-            if do_reset:
-                current_weights = target_weights.copy()
+            current_weights = rb_func(current_weights, target_weights, assets_meta_portfolio)
             last_period = period
 
         # Store weights at the start of the day (overnight holdings)
         historical_weights.append(current_weights.copy())
 
         # Calculate today's portfolio return
-        daily_ret = (asset_returns.loc[date] * current_weights).sum()
+        daily_ret = (asset_returns_portfolio.loc[date] * current_weights).sum()
         portfolio_returns.append(daily_ret)
 
         # Drift the weights for tomorrow, this reflects that winners now take up more of the pie
-        current_weights = current_weights * (1 + asset_returns.loc[date])
+        current_weights = current_weights * (1 + asset_returns_portfolio.loc[date])
         # Re-normalize weights so they represent the new % of total value
         current_weights = current_weights / current_weights.sum()
 
     # Create the returns Series
-    returns_series = pd.Series(portfolio_returns, index=asset_returns.index)
+    returns_series = pd.Series(portfolio_returns, index=asset_returns_portfolio.index)
     
     # Create the weights DataFrame
-    weights_df = pd.DataFrame(historical_weights, index=asset_returns.index)
-    weights_df = weights_df.add_prefix(port_name + ">")
-
+    weights_df = pd.DataFrame(historical_weights, index=asset_returns_portfolio.index)
+    weights_df.columns.name = "Asset"
 
     return PortfolioResult(
         returns=returns_series,
         weights=weights_df,
-        check_freq=check_freq,
-        rebalance_type=rebalance_type
+        check_freq=actual_rb_check_freq,
+        rebalance_type=actual_rb_type
     )
+
+def rebalance_full(current: pd.Series, ideal: pd.Series, assets_meta: pd.DataFrame) -> pd.Series:
+    return ideal
+
+def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, assets_meta: pd.DataFrame) -> pd.Series:
+    """
+    Surgical rebalance:
+    - Trigger: Drift > 1.0 * sigma
+    - Action: Adjust trigger asset and its opposite counterpart to 0.5 * sigma
+    """
+
+    sigmas = assets_meta['stddev'].fillna(0.10)
+
+    # 1. Calculate Relative Drift: (Current / Target) - 1
+    drift_pct = (current_weights / ideal_weights) - 1
+    
+    # 2. Check for breach of the 1-sigma rebalance span
+    breaches = drift_pct.abs() > sigmas
+    
+    if not breaches.any():
+        return current_weights
+
+    # 3. Identify the "Trigger" asset (furthest outside its sigma)
+    # We normalize drift by sigma to see who is 'most' outside their limit
+    trigger_asset = (drift_pct.abs() / sigmas).idxmax()
+    
+    # 4. Identify the "Counter" asset (closest to a trigger in the other direction)
+    # If trigger is too high, we find the one most 'underweight' relative to its sigma
+    if drift_pct[trigger_asset] > 0:
+        counter_asset = (drift_pct / sigmas).idxmin()
+    else:
+        counter_asset = (drift_pct / sigmas).idxmax()
+
+    # 5. Execute the adjustment to the Tolerance Band (0.5 * sigma)
+    new_weights = current_weights.copy()
+    
+    # Move trigger asset to 0.5 sigma
+    direction = 1 if drift_pct[trigger_asset] > 0 else -1
+    tolerance_pct = direction * (sigmas[trigger_asset] * 0.5)
+    new_weights[trigger_asset] = ideal_weights[trigger_asset] * (1 + tolerance_pct)
+    
+    # Adjust counter asset to absorb the difference (re-balancing the pair)
+    diff = current_weights[trigger_asset] - new_weights[trigger_asset]
+    new_weights[counter_asset] += diff
+    
+    return new_weights
+
+
+def period_once(_: pd.Timestamp):
+    return "CONSTANT_PERIOD"
+
+def period_daily(date: pd.Timestamp):
+    return date
+
+def period_weekly(date: pd.Timestamp):
+    return (date.year, date.isocalendar()[1])
+
+def period_monthly(date: pd.Timestamp):
+    return (date.year, date.month)
+
+def period_quarterly(date: pd.Timestamp):
+    return (date.year, (date.month - 1) // 3)
+
+def period_half_yearly(date: pd.Timestamp):
+    return (date.year, 0 if date.month <= 6 else 1)
+
+def period_yearly(date: pd.Timestamp):
+    return date.year
 
 def get_rebalance_settings(name, df_portfolios):
 
@@ -147,28 +197,18 @@ def get_rebalance_settings(name, df_portfolios):
 
     return rb_run, rb_type
 
-def parse_rb_type(name, rb_type):
+PERIOD_MAPPING = {
+    'daily': period_daily,
+    'weekly': period_weekly,
+    'monthly': period_monthly,
+    'quarterly': period_quarterly,
+    'half-year': period_half_yearly,
+    'yearly': period_yearly,
+    'once': period_once
+}
 
-    if 'sigma' == rb_type:
-        rb_type_algo = "TODO"
-    else:
-        print(f"{name} has unknown rebalance type setting '{rb_type}', defaulting to full")
-        rb_type_algo = 'full'
+REBALANCE_STRATEGIES = {
+    'full': rebalance_full,
+    'sigma': rebalance_sigma,
+}
 
-    return rb_type_algo
-
-def parse_rb_run(name, rb_run):
-
-    if 'semi-annual' == rb_run or 'half-year' == rb_run:
-        run_algo = 'H'
-    elif 'monthly' == rb_run:
-        run_algo = 'M'
-    elif 'daily' == rb_run:
-        run_algo = 'D'
-    elif 'yearly' == rb_run:
-        run_algo = 'Y'
-    else:
-        print(f"{name} has unknown rebalance run setting '{rb_run}', defaulting to RunOnce")
-        run_algo = 'O'
-
-    return run_algo

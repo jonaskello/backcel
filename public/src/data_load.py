@@ -2,21 +2,44 @@ import pandas as pd
 import os
 import logging
 
-def load_settings(base_dir, settings_file):
-    settings_df = pd.read_excel(os.path.join(base_dir, settings_file), sheet_name='Main')
+import os
+import pandas as pd
 
-    # Get settong fpr currency and dates
+def parse_excel_path(path_str, default_file):
+    """
+    Parses 'file.xlsx!Sheet' or just 'Sheet'.
+    Returns a dictionary for easy DataFrame construction.
+    """
+    path_str = str(path_str).strip()
+    if "!" in path_str:
+        file, sheet = path_str.split("!", 1)
+        return {"file": file.strip(), "sheet": sheet.strip()}
+    
+    # If no '!', assume it's a sheet in the main settings file
+    return {"file": default_file, "sheet": path_str}
+
+def load_settings(base_dir, settings_file):
+    settings_path = os.path.join(base_dir, settings_file)
+    settings_df = pd.read_excel(settings_path, sheet_name='Main')
+
+    # Get settings for currency and dates
     base_currency = settings_df.loc[settings_df['Name'] == 'currency', 'Value'].iloc[0]
     start_date = pd.to_datetime(settings_df.loc[settings_df['Name'] == 'start', 'Value'].iloc[0])
     end_date = pd.to_datetime(settings_df.loc[settings_df['Name'] == 'end', 'Value'].iloc[0])
 
-    # Get portfolio and asset files/sheets from settings
-    portfolio_sheets = settings_df[settings_df['Name'] == 'portfolio_sheet']['Value'].tolist()
-    portfolio_files_df = pd.DataFrame({'file': settings_file, 'sheet': portfolio_sheets})
-    asset_paths = settings_df[settings_df['Name'] == 'assets_file']['Value'].tolist()
-    asset_files_df = pd.DataFrame({'file': asset_paths, 'sheet': 'Main'})
-    # display(asset_files_df)
-    # portfolio_files_df
+    # 1. Parse Portfolio Sources
+    # Supports "Allocations" or "external.xlsx!Allocations"
+    portfolio_raw = settings_df[settings_df['Name'] == 'portfolios']['Value'].tolist()
+    portfolio_files_df = pd.DataFrame([
+        parse_excel_path(p, settings_file) for p in portfolio_raw
+    ])
+
+    # 2. Parse Asset Sources 
+    # Supports "Assets" or "market_data.xlsx!Main"
+    asset_raw = settings_df[settings_df['Name'] == 'assets']['Value'].tolist()
+    asset_files_df = pd.DataFrame([
+        parse_excel_path(a, settings_file) for a in asset_raw
+    ])
 
     return start_date, end_date, base_currency, portfolio_files_df, asset_files_df
 
@@ -65,7 +88,7 @@ def load_portfolios(files_df, base_dir):
 #   File -> Filename to load prices from, defaults to same file as meta
 #   Sheet -> Sheetname to load prices from, defaults to "Prices"
 # Skips rows that do not have an ID so they can be used for headings etc.
-def assets_meta(base_dir, files_df):
+def assets_meta(base_dir, files_df, base_currency):
     default_prices_sheet_name = "Prices"
     all_meta = []
     required_cols = ['name', 'currency',]
@@ -83,17 +106,22 @@ def assets_meta(base_dir, files_df):
         
         meta_df = meta_df[meta_df.index.notna()]
 
-        # Set default 'file' if column missing or has empty values
-        if 'file' not in meta_df.columns:
+        # --- Handle "prices" column -> file and sheet ---
+        if 'prices' in meta_df.columns:
+            # Parse each row (handles "file.xlsx!Sheet" or just "Sheet")
+            parsed = meta_df['prices'].apply(lambda x: parse_excel_path(x, row.file) if pd.notna(x) else None)
+            meta_df['file'] = parsed.apply(lambda x: x['file'] if x else row.file)
+            meta_df['sheet'] = parsed.apply(lambda x: x['sheet'] if x else default_prices_sheet_name)
+        else:
             meta_df['file'] = row.file
-        else:
-            meta_df['file'] = meta_df['file'].fillna(row.file)
-
-        # Set default 'sheet' if column missing or has empty values
-        if 'sheet' not in meta_df.columns:
             meta_df['sheet'] = default_prices_sheet_name
-        else:
-            meta_df['sheet'] = meta_df['sheet'].fillna(default_prices_sheet_name)
+
+        # --- Handle Currency and Proxy defaults ---
+        meta_df['currency'] = meta_df['currency'] if 'currency' in meta_df.columns else base_currency
+        meta_df['currency'] = meta_df['currency'].fillna(base_currency)
+
+        meta_df['proxy'] = meta_df['proxy'] if 'proxy' in meta_df.columns else ""
+        meta_df['proxy'] = meta_df['proxy'].fillna("")
         
         missing = [c for c in required_cols if c not in meta_df.columns]
         if missing:
@@ -111,7 +139,7 @@ def assets_meta(base_dir, files_df):
         print(f"❌ Error: Duplicate IDs found across different files/sheets: {total_dupes}")
 
     if 'proxy' in combined_df.columns:
-        proxies_used = combined_df['proxy'].dropna().unique()
+        proxies_used = [p for p in combined_df['proxy'].unique() if pd.notna(p) and str(p).strip() != ""]
         invalid_proxies = [p for p in proxies_used if p not in combined_df.index]
         if invalid_proxies:
             print(f"❌ Error: Proxies defined but not found in ID column: {invalid_proxies}")
