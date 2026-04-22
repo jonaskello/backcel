@@ -74,7 +74,7 @@ Price sheets (defaulting to name `Prices`) store the time-series data.
 
 ## 💼 4. Portfolio Definitions
 
-These are the sheets referenced by the `portfolio_sheet` setting in your `main.xlsx`. They define the specific weights and allocations for your simulation.
+These are the sheets referenced by the `Portfolios` setting in your `main.xlsx`. They define the specific weights and allocations for your simulation.
 
 ### Sheet Structure
 The sheet must follow a column-based format where each column (after the ID) represents a distinct portfolio strategy.
