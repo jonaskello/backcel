@@ -4,7 +4,7 @@ import os
 import pandas as pd
 from public.src.result import Err, Ok
 from pathlib import Path
-from public.src import data_load_main as dlm
+from public.src import main as dlm
 from public.src import backtest as bn
 from public.src import report as r
 

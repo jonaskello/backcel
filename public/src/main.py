@@ -1,9 +1,13 @@
 import os
+import traceback
 import marimo as mo
 import pandas as pd
 from public.src import data_clean as dc
 from public.src import data_load as dl
 from public.src.result import Result, Ok, Err
+from public.src import backtest as bn
+from public.src import report as nr
+from public.src.monitor import monitor
 
 def display(obj):
     mo.output.append(obj)
@@ -13,6 +17,27 @@ def get_settings_file_name() -> str:
 
 def get_local_base_dir() -> str:
     return os.environ.get("DATA_PATH", "public/example")
+
+async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
+    monitor.clear()
+    await on_progress("Loading assets...")
+    data_load_result = await data_load_all(base_dir, on_progress, settings_file_path)
+    match data_load_result:
+        case Ok(data):
+            portfolio_df, asset_prices_available, assets_meta_df = data
+            await on_progress("Running backtest...")
+            backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
+            match backtest_result:
+                case Ok(data):
+                    await on_progress("Calculating results...")
+                    nr.show_results(data)
+                case Err(e):
+                    print(f"Error: {e}")
+                    traceback.print_exception(e)
+                    mo.stop(True, f"ERROR: {e}")
+        case Err(e):
+            print(f"Error: {e}")
+            mo.stop(True, f"ERROR: {e}")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 

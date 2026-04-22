@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from public.src.backtest import BacktestSession
+from public.src.monitor import monitor
 
 def show_results(results: BacktestSession):
     # This will show a table with a row for each portfolio
@@ -17,7 +18,10 @@ def show_results(results: BacktestSession):
     # Use marimo's UI wrapper to ensure visibility in WASM
     ui_portfolio_curves = (mo.ui.plotly(fig))
     ui_drawdown_curves = mo.ui.plotly(plt)
-    ui_all = mo.vstack([ui_portfolio_table, ui_portfolio_curves, ui_drawdown_curves])
+    ui_monitor_messages = mo.accordion(
+        {"Backtest Messages": mo.md("\n".join([f"- {m}" for m in monitor.messages]))}
+    )
+    ui_all = mo.vstack([ui_monitor_messages, ui_portfolio_table, ui_portfolio_curves, ui_drawdown_curves])
     mo.output.replace(ui_all)
 
 def get_stats(results: BacktestSession):

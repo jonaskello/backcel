@@ -48,7 +48,7 @@ def _():
 
     import os
     import asyncio
-    from public.src import data_load_main as dlm
+    from public.src import main as dlm
 
     get_base_path, set_base_path = mo.state("")
     download_btn = mo.ui.run_button(label="⬇️ Download example files")
@@ -73,8 +73,6 @@ async def _(dlm, download_btn, fm, get_base_path, os):
     from public.src import data_load as dl
 
     base_dir = get_base_path()
-    # mo.stop(base_dir == "", mo.vstack([mo.md("To get started, click the button above to mount a folder."),
-    #                                    mo.md("It can be an empty folder or a folder with a main file.")]))
     mo.stop(base_dir == "")
 
     settings_file_path = os.path.join(base_dir, dlm.get_settings_file_name())
@@ -120,24 +118,7 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
                 _spinner.update(msg)
                 await asyncio.sleep(0.1)
 
-            _spinner.update("Loading assets...")
-            data_load_result = await dlm.data_load_all(base_dir, on_progress, settings_file_path)
-            match data_load_result:
-                case Ok(data):
-                    portfolio_df, asset_prices_available, assets_meta_df = data
-                    _spinner.update("Running backtest...")
-                    backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
-                    match backtest_result:
-                        case Ok(data):
-                            _spinner.update("Calculating results...")
-                            nr.show_results(data)
-                        case Err(e):
-                            print(f"Error: {e}")
-                            traceback.print_exception(e)
-                            mo.stop(True, f"ERROR: {e}")
-                case Err(e):
-                    print(f"Error: {e}")
-                    mo.stop(True, f"ERROR: {e}")
+            await dlm.run_full_backtest(base_dir, on_progress, settings_file_path)
     return
 
 
