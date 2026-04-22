@@ -58,6 +58,6 @@ async def test_full_engine_run(test_file):
 async def load_expected(base_dir, test_file):
     file_path = os.path.join(base_dir, test_file)
     expected_portfolio_values = pd.read_excel(file_path, sheet_name='Expected_Portfolio_Values', index_col=0)
-    expected_portfolio_weights = pd.read_excel(file_path, sheet_name='Expected_Portfolio_Weights', header=[0, 1], index_col=0)
+    expected_portfolio_weights = pd.read_excel(file_path, sheet_name='Expected_Portfolio_Weights', header=[0, 1], index_col=0).astype(float)
     expected_portfolio_weights.index.name = 'Date'
     return expected_portfolio_values, expected_portfolio_weights
