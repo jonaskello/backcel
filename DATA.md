@@ -5,7 +5,15 @@ This guide explains how to structure your Excel files for successful backtests.
 ---
 
 ## 🏗 Document Hierarchy
-The engine follows a "Hub and Spoke" model. Your `main.xlsx` is the hub that points to all other data sources.
+The engine follows a **"Hub and Spoke"** model, where `main.xlsx` serves as the central hub connecting all data sources.
+
+### 📄 Sheet Classifications
+The system utilizes four distinct types of Excel sheets to execute the backtest:
+
+* **Main:** This sheet is the global settings for the backtest such as start and end date. It also points to all other sheets.
+* **Asset Registry:** This type of sheet holds information about assets such as ID and name, and points to prices for each asset.
+* **Asset Prices:** This type of sheet holds time-series pricing data for the assets.
+* **Portfolio Config Sheet:** This type of sheet defines the weights and rebalancing for portfolios to backtest..
 
 ---
 
