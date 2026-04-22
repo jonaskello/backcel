@@ -88,7 +88,7 @@ def load_portfolios(files_df, base_dir):
 #   File -> Filename to load prices from, defaults to same file as meta
 #   Sheet -> Sheetname to load prices from, defaults to "Prices"
 # Skips rows that do not have an ID so they can be used for headings etc.
-def assets_meta(base_dir, files_df):
+def assets_meta(base_dir, files_df, base_currency):
     default_prices_sheet_name = "Prices"
     all_meta = []
     required_cols = ['name', 'currency',]
@@ -105,6 +105,18 @@ def assets_meta(base_dir, files_df):
         meta_df.columns = meta_df.columns.str.lower()
         
         meta_df = meta_df[meta_df.index.notna()]
+
+        # --- Handle Currency ---
+        if 'currency' not in meta_df.columns:
+            meta_df['currency'] = base_currency
+        else:
+            meta_df['currency'] = meta_df['currency'].fillna(base_currency)
+
+        # --- Handle Proxy ---
+        if 'proxy' not in meta_df.columns:
+            meta_df['proxy'] = ""
+        else:
+            meta_df['proxy'] = meta_df['proxy'].fillna("")
 
         # Set default 'file' if column missing or has empty values
         if 'file' not in meta_df.columns:
