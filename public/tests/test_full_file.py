@@ -14,12 +14,17 @@ TEST_DATA_DIR = CURRENT_DIR / "data"
 excel_test_files = list(TEST_DATA_DIR.glob("test_*.xlsx"))
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("test_file", excel_test_files)
+@pytest.mark.parametrize(
+    "test_file", 
+    excel_test_files, 
+    ids=[f.name for f in excel_test_files]
+)
 async def test_full_engine_run(test_file):
 
     async def on_progress(msg: str):
         print(msg)
 
+    print(f"\n\n----RUNNING TEST FILE {test_file}")
     base_dir = "./public/tests/data"
     data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
     expected_values, expected_weights, expected_stats = await load_expected(base_dir, test_file)
@@ -55,10 +60,11 @@ async def test_full_engine_run(test_file):
 
 
                 case Err(e):
-                    print(f"Error: {e}")
+                    pytest.fail(f"Error: {e}")
                     traceback.print_exception(e)
         case Err(e):
-            print(f"Error: {e}")
+            traceback.print_exception(e)
+            pytest.fail(f"Error: {e}")
 
 async def load_expected(base_dir, test_file):
     file_path = os.path.join(base_dir, test_file)
