@@ -20,8 +20,8 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 | **currency** | `SEK` | The base currency for all final reports. |
 | **start** | `2012-05-12` | The starting date for the simulation. |
 | **end** | `2015-07-23` | The ending date for the simulation. |
-| **portfolio_sheet**| `Strategy_A` | Sheet name in `main.xlsx` for weights. (Repeatable). |
-| **assets_file** | `Assets.xlsx` | External file for asset metadata/prices. (Repeatable). |
+| **portfolios**| `Portfolios.xlsx!Tech_Stocks` | Sheet name or filename!sheetname for weights, eg. `Tech_Stocks` or `Portfolios.xlsx!Tech_Stocks`. (Repeatable). |
+| **assets** | `Assets.xlsx!Stocks` | Sheet name or filename!sheetname for asset metadata/prices, eg. `Stocks` or `Assets.xlsx!Stocks `. (Repeatable). |
 
 > [!TIP] 
 > Setting names starting with underscore (`_`) will be ignored. This can be used to disable settings without removing them.
