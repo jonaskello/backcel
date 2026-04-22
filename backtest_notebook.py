@@ -119,24 +119,6 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
                 await asyncio.sleep(0.1)
 
             await dlm.run_full_backtest(base_dir, on_progress, settings_file_path)
-            # await on_progress("Loading assets...")
-            # data_load_result = await dlm.data_load_all(base_dir, on_progress, settings_file_path)
-            # match data_load_result:
-            #     case Ok(data):
-            #         portfolio_df, asset_prices_available, assets_meta_df = data
-            #         await on_progress("Running backtest...")
-            #         backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
-            #         match backtest_result:
-            #             case Ok(data):
-            #                 await on_progress("Calculating results...")
-            #                 nr.show_results(data)
-            #             case Err(e):
-            #                 print(f"Error: {e}")
-            #                 traceback.print_exception(e)
-            #                 mo.stop(True, f"ERROR: {e}")
-            #     case Err(e):
-            #         print(f"Error: {e}")
-            #         mo.stop(True, f"ERROR: {e}")
     return
 
 
