@@ -104,6 +104,7 @@ def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, ass
     
     # Create the weights DataFrame
     weights_df = pd.DataFrame(historical_weights, index=asset_returns_portfolio.index)
+    weights_df.columns.name = "Asset"
 
     return PortfolioResult(
         returns=returns_series,
