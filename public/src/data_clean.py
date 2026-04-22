@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import date
+from public.src.monitor import monitor
 
 def resolve_asset_dependencies(initial_tickers, assets_meta_df, base_currency):
     all_valid_ids = set(assets_meta_df.index)
@@ -108,6 +109,7 @@ def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.Dat
     
     if not assets_with_nans.empty:
         print(f"\n--- WARNING: Portfolio Assets with Missing Data after {start_date} ---")
+        monitor.add(f"\n--- WARNING: Portfolio Assets with Missing Data after {start_date} ---")
         for asset in assets_with_nans.index:
             first_date = df[asset].first_valid_index()
             missing_count = assets_with_nans[asset]
@@ -125,6 +127,7 @@ def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.Dat
     if not final_df.empty:
         actual_start = final_df.index[0].date()
         print(f"--- INFO: Backtest will start on: {actual_start} ---")
+        monitor.add(f"--- INFO: Backtest will start on: {actual_start} ---")
     else:
         raise ValueError(f"No overlapping data found for these assets after {start_date}")
 

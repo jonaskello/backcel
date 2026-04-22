@@ -7,6 +7,7 @@ from public.src import data_load as dl
 from public.src.result import Result, Ok, Err
 from public.src import backtest as bn
 from public.src import report as nr
+from public.src.monitor import monitor
 
 def display(obj):
     mo.output.append(obj)
@@ -18,6 +19,7 @@ def get_local_base_dir() -> str:
     return os.environ.get("DATA_PATH", "public/example")
 
 async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
+    monitor.clear()
     await on_progress("Loading assets...")
     data_load_result = await data_load_all(base_dir, on_progress, settings_file_path)
     match data_load_result:
