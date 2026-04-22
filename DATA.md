@@ -17,22 +17,22 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 
 | Name | Value | Description |
 | :--- | :--- | :--- |
-| **currency** | `SEK` | The base currency for all final reports. |
-| **start** | `2012-05-12` | The starting date for the simulation. |
-| **end** | `2015-07-23` | The ending date for the simulation. |
-| **portfolios**| `Portfolios.xlsx!Tech_Stocks` | Sheet name or filename!sheetname for weights, eg. `Tech_Stocks` or `Portfolios.xlsx!Tech_Stocks`. (Repeatable). |
-| **assets** | `Assets.xlsx!Stocks` | Sheet name or filename!sheetname for asset metadata/prices, eg. `Stocks` or `Assets.xlsx!Stocks `. (Repeatable). |
+| **Currency** | `SEK` | The base currency for all final reports. |
+| **Start** | `2012-05-12` | The starting date for the simulation. |
+| **End** | `2015-07-23` | The ending date for the simulation. |
+| **Portfolios**| `Portfolios.xlsx!Tech_Stocks` | Sheet name or filename!sheetname for weights, eg. `Tech_Stocks` or `Portfolios.xlsx!Tech_Stocks`. (Repeatable). |
+| **Assets** | `Assets.xlsx!Stocks` | Sheet name or filename!sheetname for asset metadata/prices, eg. `Stocks` or `Assets.xlsx!Stocks `. (Repeatable). |
 
 > [!TIP] 
 > Setting names starting with underscore (`_`) will be ignored. This can be used to disable settings without removing them.
 
 ---
 
-## 📂 2. Assets (`assets_file`)
+## 📂 2. Assets (`assets`)
 
-These are the files referenced by the `asset_file` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located. Each file must contain a sheet named **`main`** to define asset metadata.
+These are the sheets referenced by the `assets` setting in your `main.xlsx`. They define the main information about the assets, and points to where the prices for each asset is located.
 
-### Asset `main` sheet Columns
+### Asset sheet Columns
 | Column | Requirement | Description |
 | :--- | :--- | :--- |
 | **ID** | **Required** | Unique identifier (Ticker/ISIN) used in portfolio sheets. |
