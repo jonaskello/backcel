@@ -91,9 +91,10 @@ def load_portfolios(files_df, base_dir):
 def assets_meta(base_dir, files_df, base_currency):
     default_prices_sheet_name = "Prices"
     all_meta = []
-    required_cols = ['name', 'currency',]
-    optional_cols = [ 'stddev', 'file', 'sheet', 'proxy']
-    cols_to_keep = required_cols + optional_cols
+    required_cols = [ 'name' ]
+    optional_cols = [ 'currency', 'proxy', 'stddev']
+    generated_cols = [ 'file', 'sheet']
+    cols_to_keep = required_cols + optional_cols + generated_cols
 
     for row in files_df.itertuples():
         file_path = os.path.join(base_dir, row.file)
@@ -106,7 +107,7 @@ def assets_meta(base_dir, files_df, base_currency):
         
         meta_df = meta_df[meta_df.index.notna()]
 
-        # --- Handle "prices" column -> file and sheet ---
+        # Split "prices" column to file and sheet
         if 'prices' in meta_df.columns:
             # Parse each row (handles "file.xlsx!Sheet" or just "Sheet")
             parsed = meta_df['prices'].apply(lambda x: parse_excel_path(x, row.file) if pd.notna(x) else None)
@@ -116,12 +117,13 @@ def assets_meta(base_dir, files_df, base_currency):
             meta_df['file'] = row.file
             meta_df['sheet'] = default_prices_sheet_name
 
-        # --- Handle Currency and Proxy defaults ---
+        # currency, proxy, stddev defaults
         meta_df['currency'] = meta_df['currency'] if 'currency' in meta_df.columns else base_currency
         meta_df['currency'] = meta_df['currency'].fillna(base_currency)
-
         meta_df['proxy'] = meta_df['proxy'] if 'proxy' in meta_df.columns else ""
         meta_df['proxy'] = meta_df['proxy'].fillna("")
+        meta_df['stddev'] = meta_df['stddev'] if 'stddev' in meta_df.columns else 0.1
+        meta_df['stddev'] = meta_df['stddev'].fillna(0.1)
         
         missing = [c for c in required_cols if c not in meta_df.columns]
         if missing:
