@@ -24,6 +24,22 @@ async with app.setup:
         await micropip.install(str(mo.notebook_location().joinpath("public", "dist", "portfolio_logic-0.1.0-py3-none-any.whl")))
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## 📊 Beckcel
+
+    Welcome to beckcel, the local excel based portfolio backtesting engine! To get started:
+    1. Create an empty folder on your drive and press the **📁 Mount Folder** button below to mount it.
+    2. Press the **⬇️ Download Example Files** button that appears to fill your folder with example files.
+    3. Press the **🚀 Run Backtest** button to run the backtest.
+    4. Open the `main.xlsx` file and in the `Main` sheet change the `start_date` setting. Save the file in excel, and then press the **🚀 Run Backtest** button again to run with the new settings.
+
+    _Note: All data stays on your machine; no files are uploaded to a server._ For information about the format of the excel files see [data docs](https://github.com/jonaskello/backcel/blob/main/DATA.md) or the [source code](https://github.com/jonaskello/backcel).
+    """)
+    return
+
+
 @app.cell
 def _():
     # CHECK FOR BASE FOLDER
@@ -55,8 +71,9 @@ async def _(dlm, download_btn, fm, get_base_path, os):
     from public.src import data_load as dl
 
     base_dir = get_base_path()
-    mo.stop(base_dir == "", mo.vstack([mo.md("To get started, click the button above to mount a folder."),
-                                       mo.md("It can be an empty folder or a folder with a main file.")]))
+    # mo.stop(base_dir == "", mo.vstack([mo.md("To get started, click the button above to mount a folder."),
+    #                                    mo.md("It can be an empty folder or a folder with a main file.")]))
+    mo.stop(base_dir == "")
 
     settings_file_path = os.path.join(base_dir, dlm.get_settings_file_name())
     run_btn = mo.ui.run_button(label="🚀 Run backtest")
