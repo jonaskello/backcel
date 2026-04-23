@@ -102,7 +102,7 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                             
     return filled_prices
 
-def adjust_asset_prices_start_to_available_data(asset_prices: pd.DataFrame, start_date: date) -> pd.DataFrame:
+def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, start_date: date) -> pd.DataFrame:
     # Identify assets with ANY missing prices in this range
     missing_data = asset_prices.isnull().sum()
     assets_with_nans = missing_data[missing_data > 0]
@@ -119,13 +119,13 @@ def adjust_asset_prices_start_to_available_data(asset_prices: pd.DataFrame, star
             monitor.add(f"Limiting Asset: {limiting_asset} (starts {latest_date})")
 
     # Drop rows with any missing values
-    final_df = asset_prices.dropna()
+    asset_prices_adjusted = asset_prices.dropna()
     
     # Check if we have data left and print the actual start date
-    if not final_df.empty:
-        actual_start = pd.to_datetime(str(final_df.index[0])).date()
+    if not asset_prices_adjusted.empty:
+        actual_start = pd.to_datetime(str(asset_prices_adjusted.index[0])).date()
         monitor.add(f"INFO: Backtest will start on: {actual_start}")
     else:
         raise ValueError(f"No overlapping data found for these assets after {start_date}")
 
-    return final_df
+    return asset_prices_adjusted

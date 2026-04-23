@@ -85,7 +85,7 @@ async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tup
         await on_progress("Loaded assets")
 
         # ADJUST START DATE ACCORDING TO AVAILABLE DATA
-        asset_prices_available = dc.adjust_asset_prices_start_to_available_data(asset_prices_proxied, start_date)
+        asset_prices_available = dc.adjust_asset_prices_start_to_available_data(assets_meta_df, asset_prices_proxied, start_date)
         # display(asset_prices_backtest)
 
         return Ok((portfolio_df, asset_prices_available, assets_meta_df))
