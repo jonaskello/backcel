@@ -271,7 +271,7 @@ def read_excel_with_workarounds(file_path: str, sheet_name: str, index_col: int 
             if isinstance(data, str):
                 data = data.encode('utf-8')
             # Convert bytes to a file-like object for pandas
-            df = pd.read_excel(io.BytesIO(data), sheet_name=sheet_name, index_col=index_col, nrows=nrows)
+            df = pd.read_excel(io.BytesIO(data), sheet_name=sheet_name, index_col=index_col, nrows=nrows, usecols=usecols, parse_dates=parse_dates)
             return df
         else:
             raise e
