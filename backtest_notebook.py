@@ -39,8 +39,9 @@ def _():
     1. Press the **⬇️ Download Example Files** button that appears to fill your folder with example files.
     1. Press the **🚀 Run Backtest** button to run the backtest.
     1. Open the 📄 `main.xlsx` file and in the `Main` sheet change the `start_date` setting. Save the file in excel, and then press the **🚀 Run Backtest** button again to run with the new settings.
+    1. Build your own tests: Read the [data docs](https://github.com/jonaskello/backcel/blob/main/DATA.md) for instructions on creating custom Excel input files.
 
-    _Note: All data stays on your machine; no files are uploaded to a server._ For information about the format of the excel files see [data docs](https://github.com/jonaskello/backcel/blob/main/DATA.md) or the [source code](https://github.com/jonaskello/backcel).
+    _Note: All data stays on your machine; no files are uploaded to a server._ For details see the [source code](https://github.com/jonaskello/backcel).
     """)
     return
 
