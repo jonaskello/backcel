@@ -102,6 +102,8 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                             
     return filled_prices
 
+from datetime import datetime
+
 def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.DataFrame:
     # Identify assets with ANY missing prices in this range
     missing_data = df.isnull().sum()
@@ -110,12 +112,25 @@ def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.Dat
     if not assets_with_nans.empty:
         print(f"\n--- WARNING: Portfolio Assets with Missing Data after {start_date} ---")
         monitor.add(f"\n--- WARNING: Portfolio Assets with Missing Data after {start_date} ---")
+
+        # Find which asset is limiting (has the latest start date)
+        start_points = [(df[a].first_valid_index(), a) for a in df.columns]
+        valid_points = [p for p in start_points if p[0] is not None]
+        
+        if valid_points:
+            latest_idx, limiting_asset = max(valid_points)
+            # Explicitly cast to str to satisfy the type checker
+            latest_date = pd.to_datetime(str(latest_idx)).date()
+            monitor.add(f"Limiting Asset: {limiting_asset} (starts {latest_date})")
+
         for asset in assets_with_nans.index:
             first_date = df[asset].first_valid_index()
             missing_count = assets_with_nans[asset]
             
             if first_date:
-                print(f"Asset: {asset:10} | Missing Rows: {missing_count:4} | First Available: {first_date.date()}")
+                # Explicitly cast to str to satisfy the type checker
+                printable_date = pd.to_datetime(str(first_date)).date()
+                print(f"Asset: {asset:10} | Missing Rows: {missing_count:4} | First Available: {printable_date}")
             else:
                 print(f"Asset: {asset:10} | Missing Rows: {missing_count:4} | No data found in file.")
         print("-------------------------------------------\n")
@@ -125,11 +140,10 @@ def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.Dat
     
     # Check if we have data left and print the actual start date
     if not final_df.empty:
-        actual_start = final_df.index[0].date()
+        actual_start = pd.to_datetime(str(final_df.index[0])).date()
         print(f"--- INFO: Backtest will start on: {actual_start} ---")
         monitor.add(f"--- INFO: Backtest will start on: {actual_start} ---")
     else:
         raise ValueError(f"No overlapping data found for these assets after {start_date}")
 
     return final_df
-
