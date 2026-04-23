@@ -38,7 +38,6 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
     nr.show_results(backtest_result.unwrap())
 
 def _handle_failure(e: Exception):
-    """Centralized error track."""
     logger.exception(e)
     mo.stop(True, mo.callout(str(e), kind="danger"))
 
