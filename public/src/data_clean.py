@@ -1,6 +1,9 @@
 import pandas as pd
 from datetime import date
 from public.src.monitor import monitor
+import logging
+
+logger = logging.getLogger(__name__)
 
 def resolve_asset_dependencies(initial_tickers, assets_meta_df, base_currency):
     all_valid_ids = set(assets_meta_df.index)
@@ -83,7 +86,7 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                             # If asset is entirely empty, use proxy data as is
                             filled_prices[asset_id] = proxy_series
                             new_first = filled_prices[asset_id].first_valid_index()
-                            print(f"Filled empty asset {asset_id} using {proxy_id} | Starts at {new_first.date()}")
+                            logger.info(f"Filled empty asset {asset_id} using {proxy_id} | Starts at {new_first.date()}")
                             changes_made = True
                         else:
                             # Calculate scaling ratio at the target's earliest available price
@@ -97,39 +100,40 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                                 # Fill the target's leading NaNs with the scaled proxy values
                                 filled_prices[asset_id] = target_series.combine_first(scaled_proxy)
                                 new_first = filled_prices[asset_id].first_valid_index()
-                                print(f"Backfilled {asset_id} using {proxy_id} (Ratio: {ratio:.4f}) | {new_first.date()} to {target_first.date()}")
+                                logger.info(f"Backfilled {asset_id} using {proxy_id} (Ratio: {ratio:.4f}) | {new_first.date()} to {target_first.date()}")
                                 changes_made = True
                             
     return filled_prices
 
-def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.DataFrame:
+def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, start_date: date) -> pd.DataFrame:
     # Identify assets with ANY missing prices in this range
-    missing_data = df.isnull().sum()
-    assets_with_nans = missing_data[missing_data > 0]
+    first_indices = asset_prices.apply(lambda col: col.first_valid_index())
+    valid_indices = first_indices.dropna()
     
-    if not assets_with_nans.empty:
-        print(f"\n--- WARNING: Portfolio Assets with Missing Data after {start_date} ---")
-        monitor.add(f"\n--- WARNING: Portfolio Assets with Missing Data after {start_date} ---")
-        for asset in assets_with_nans.index:
-            first_date = df[asset].first_valid_index()
-            missing_count = assets_with_nans[asset]
-            
-            if first_date:
-                print(f"Asset: {asset:10} | Missing Rows: {missing_count:4} | First Available: {first_date.date()}")
-            else:
-                print(f"Asset: {asset:10} | Missing Rows: {missing_count:4} | No data found in file.")
-        print("-------------------------------------------\n")
-    
+    # Log limiting asset
+    if not valid_indices.empty:
+        limiting_asset = valid_indices.idxmax()
+        latest_idx = valid_indices.max()
+        latest_date = pd.to_datetime(str(latest_idx)).date()
+
+        # Added .any() or ensure scalar comparison to satisfy the type checker
+        if (pd.to_datetime(str(latest_idx)) > pd.Timestamp(start_date)):
+            monitor.add(f"WARNING: Portfolio Assets with Missing Data after {start_date:%Y-%m-%d}")
+            try:
+                # Assumes limiting_asset (column name) exists as an index in assets_meta_df
+                asset_name = assets_meta_df.loc[limiting_asset, "name"]
+                monitor.add(f"Limiting Asset: {asset_name} ({limiting_asset}) starts {latest_date}")
+            except KeyError:
+                monitor.add(f"Limiting Asset: {limiting_asset} (starts {latest_date})")
+
     # Drop rows with any missing values
-    final_df = df.dropna()
+    asset_prices_adjusted = asset_prices.dropna()
     
     # Check if we have data left and print the actual start date
-    if not final_df.empty:
-        actual_start = final_df.index[0].date()
-        print(f"--- INFO: Backtest will start on: {actual_start} ---")
-        monitor.add(f"--- INFO: Backtest will start on: {actual_start} ---")
+    if not asset_prices_adjusted.empty:
+        actual_start = pd.to_datetime(str(asset_prices_adjusted.index[0])).date()
+        monitor.add(f"INFO: Backtest will start on: {actual_start}")
     else:
         raise ValueError(f"No overlapping data found for these assets after {start_date}")
 
-    return final_df
-
+    return asset_prices_adjusted

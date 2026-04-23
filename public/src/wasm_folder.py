@@ -5,6 +5,9 @@ import marimo as mo
 import js
 from pyodide.ffi import to_js
 from pyodide.ffi import create_proxy
+import logging
+
+logger = logging.getLogger(__name__)
 
 _write_permission_event = asyncio.Event()
 _channel_name = "marimo-mount"
@@ -26,18 +29,18 @@ def listen_folder_mount(set_mount_path):
                 if os.path.exists(mount_path):
                     js.self.pyodide.FS.unmount(mount_path)
                 await js.self.pyodide.mountNativeFS(mount_path, data.handle)
-                print(f"Successfully mounted to {mount_path} via BroadcastChannel")
-                print("Mounted Files:", os.listdir(mount_path))
+                logger.info(f"Successfully mounted to {mount_path} via BroadcastChannel")
+                # logger.info("Mounted Files:", os.listdir(mount_path))
                 set_mount_path(mount_path)
             except Exception as e:
-                print(f"Mount error: {e}")
+                logger.error(f"Mount error: {e}")
         elif data.type == "PERMISSION_RESULT":
             if data.status == "granted":
                 _write_permission_event.set()
             else:
-                print(f"PERMISSION_RESULT {data.status}")
+                logger.info(f"PERMISSION_RESULT {data.status}")
         else:
-            print(f"Unknown message {data.type}") 
+            logger.warning(f"Unknown message {data.type}") 
 
 
     _channel.onmessage = create_proxy(on_message)

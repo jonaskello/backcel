@@ -1,15 +1,12 @@
-import pandas as pd
 import os
 import logging
-
-import os
 import pandas as pd
+from public.src import data_validation as dv
+import logging
+
+logger = logging.getLogger(__name__)
 
 def parse_excel_path(path_str, default_file):
-    """
-    Parses 'file.xlsx!Sheet' or just 'Sheet'.
-    Returns a dictionary for easy DataFrame construction.
-    """
     path_str = str(path_str).strip()
     if "!" in path_str:
         file, sheet = path_str.split("!", 1)
@@ -18,30 +15,35 @@ def parse_excel_path(path_str, default_file):
     # If no '!', assume it's a sheet in the main settings file
     return {"file": default_file, "sheet": path_str}
 
-def load_settings(base_dir, settings_file):
+def load_settings(base_dir: str, settings_file: str, sheet_name: str):
     settings_path = os.path.join(base_dir, settings_file)
-    settings_df = pd.read_excel(settings_path, sheet_name='Main')
+    settings_df = pd.read_excel(settings_path, sheet_name=sheet_name)
+    # Filter out any rows where the Name starts with "_"
+    if "Name" in settings_df.columns:
+        settings_df = settings_df[~settings_df['Name'].str.startswith('_', na=False)]
+    # Validate the file
+    dv.validate_settings(settings_df, settings_file, sheet_name)
 
     # Get settings for currency and dates
     base_currency = settings_df.loc[settings_df['Name'] == 'currency', 'Value'].iloc[0]
     start_date = pd.to_datetime(settings_df.loc[settings_df['Name'] == 'start', 'Value'].iloc[0])
     end_date = pd.to_datetime(settings_df.loc[settings_df['Name'] == 'end', 'Value'].iloc[0])
 
-    # 1. Parse Portfolio Sources
-    # Supports "Allocations" or "external.xlsx!Allocations"
+    # Parse Portfolio Sources
     portfolio_raw = settings_df[settings_df['Name'] == 'portfolios']['Value'].tolist()
     portfolio_files_df = pd.DataFrame([
         parse_excel_path(p, settings_file) for p in portfolio_raw
     ])
 
-    # 2. Parse Asset Sources 
-    # Supports "Assets" or "market_data.xlsx!Main"
+    #  Parse Asset Sources 
     asset_raw = settings_df[settings_df['Name'] == 'assets']['Value'].tolist()
     asset_files_df = pd.DataFrame([
         parse_excel_path(a, settings_file) for a in asset_raw
     ])
 
     return start_date, end_date, base_currency, portfolio_files_df, asset_files_df
+
+
 
 # Load portfolio names and weights
 # The file should have columns ID, Portfolio1, Portfolio2...
@@ -51,16 +53,12 @@ def load_settings(base_dir, settings_file):
 # which can be used to add meta columns like _Name for the asssets
 # or disable a portfolio like _Portfolio3
 def load_portfolios(files_df, base_dir):
-    all_portfolios = []
-
-
+    all_portfolios = {}
     for row in files_df.itertuples():
         file_name = os.path.join(base_dir, row.file)
-        sheet_name = row.sheet
-
         if not os.path.exists(file_name):
-            raise FileNotFoundError(f"Data file not found: {file_name}")
-        df = pd.read_excel(file_name, sheet_name, index_col=0)
+            raise FileNotFoundError(file_name)
+        df = pd.read_excel(file_name, row.sheet, index_col=0)
         
         # Drop columns that start with an underscore
         cols_to_drop = [c for c in df.columns if c.startswith('_')]
@@ -74,10 +72,13 @@ def load_portfolios(files_df, base_dir):
             print("\n--- WARNING: Portfolio index (ID) contains NaN values! ---")
             print(df[df.index.isna()])
 
-        all_portfolios.append(df)
+        context = f"{row.file}!{row.sheet}"
+        all_portfolios[context] = df
+
+    dv.validate_portfolios(all_portfolios)
 
     # Combine by merging columns on matching index (ID)
-    combined_df = pd.concat(all_portfolios, axis=1)
+    combined_df = pd.concat(all_portfolios.values(), axis=1)
 
     return combined_df
 
@@ -90,21 +91,19 @@ def load_portfolios(files_df, base_dir):
 # Skips rows that do not have an ID so they can be used for headings etc.
 def assets_meta(base_dir, files_df, base_currency):
     default_prices_sheet_name = "Prices"
-    all_meta = []
-    required_cols = [ 'name' ]
-    optional_cols = [ 'currency', 'proxy', 'stddev']
-    generated_cols = [ 'file', 'sheet']
-    cols_to_keep = required_cols + optional_cols + generated_cols
+    all_meta = {}
 
     for row in files_df.itertuples():
         file_path = os.path.join(base_dir, row.file)
-        sheet_name = row.sheet
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Data file not found: {file_path}")
+            raise FileNotFoundError(file_path)
             
-        meta_df = pd.read_excel(file_path, sheet_name=sheet_name, index_col="ID")
+        meta_df = pd.read_excel(file_path, sheet_name=row.sheet)
         meta_df.columns = meta_df.columns.str.lower()
-        
+        if 'id' in meta_df.columns:
+            meta_df = meta_df.set_index('id')
+        else:
+            raise dv.DataFileValidationError([f"Missing required column: **'ID'**"], row.file + "!" + row.sheet)
         meta_df = meta_df[meta_df.index.notna()]
 
         # Split "prices" column to file and sheet
@@ -125,59 +124,54 @@ def assets_meta(base_dir, files_df, base_currency):
         meta_df['stddev'] = meta_df['stddev'] if 'stddev' in meta_df.columns else 0.1
         meta_df['stddev'] = meta_df['stddev'].fillna(0.1)
         
-        missing = [c for c in required_cols if c not in meta_df.columns]
-        if missing:
-            print(f"⚠️ Warning: {file_path} [{sheet_name}] is missing columns: {missing}")
-
-        all_meta.append(meta_df)
+        all_meta[row.file + "!" + row.sheet] = meta_df
     
     if not all_meta:
         return pd.DataFrame()
 
-    combined_df = pd.concat(all_meta)
-
-    if combined_df.index.duplicated().any():
-        total_dupes = combined_df.index[combined_df.index.duplicated()].unique().tolist()
-        print(f"❌ Error: Duplicate IDs found across different files/sheets: {total_dupes}")
-
-    if 'proxy' in combined_df.columns:
-        proxies_used = [p for p in combined_df['proxy'].unique() if pd.notna(p) and str(p).strip() != ""]
-        invalid_proxies = [p for p in proxies_used if p not in combined_df.index]
-        if invalid_proxies:
-            print(f"❌ Error: Proxies defined but not found in ID column: {invalid_proxies}")
+    dv.validate_assets_meta(all_meta)
+    combined_df = pd.concat(all_meta.values())
 
     # Final filtering of columns
+    required_cols = [ 'name' ]
+    optional_cols = [ 'currency', 'proxy', 'stddev']
+    generated_cols = [ 'file', 'sheet']
+    cols_to_keep = required_cols + optional_cols + generated_cols
     existing_keep_cols = [c for c in cols_to_keep if c in combined_df.columns]
     combined_df = combined_df[existing_keep_cols]
 
     return combined_df
 
-def load_asset_prices_from_file_sheet(file_name, sheet_name, needed_ids):
-    if not os.path.exists(file_name):
-        raise FileNotFoundError(f"Data file not found: {file_name}")
+def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_ids):
+    file_path = os.path.join(base_dir, file_name)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(file_path)
     
     #  We need to see what columns actually exist in the file first
     # This avoids a ValueError if one of your needed_ids isn't in the Excel sheet
-    preview = pd.read_excel(file_name, sheet_name=sheet_name, nrows=0)
+    try:
+        preview = pd.read_excel(file_path, sheet_name=sheet_name, nrows=0)
+    except ValueError:
+        raise dv.DataFileValidationError([f"Worksheet named **'{sheet_name}'** not found."], file_path)
 
     # Identify missing IDs
     missing_ids = [id for id in needed_ids if id not in preview.columns]
     if missing_ids:
-        raise KeyError(f"The following IDs were not found in {file_name} [{sheet_name}]: {missing_ids}")
-
+        raise dv.DataFileValidationError([f"The following IDs were not found: `{', '.join(missing_ids)}`"], file_name + "!" + sheet_name)
     # Identify the first column (Date) and find which IDs exist in the sheet
     date_col = preview.columns[0]
     valid_cols = [date_col] + [id for id in needed_ids if id in preview.columns]
 
     # Load only the necessary columns
     assets_prices_df = pd.read_excel(
-        file_name, 
+        file_path, 
         sheet_name=sheet_name, 
         index_col=0, 
         parse_dates=[0], 
         usecols=valid_cols
     )
-    
+    dv.validate_asset_prices(assets_prices_df, file_name, sheet_name, needed_ids)
+
     return assets_prices_df
 
 # Loads prices for assets specified in the assets meta dataframe
@@ -191,12 +185,11 @@ async def load_asset_prices(base_dir: str, assets_meta_df, on_progress):
     all_price_dfs = []
 
     for (file_name, sheet), group in grouped:
-        file = os.path.join(base_dir, file_name)
         id_list = group.index.tolist()
         # print(f"Loading {len(id_list)} assets from {file_name} [{sheet}]")
         
         # Load prices using your second function
-        df = load_asset_prices_from_file_sheet(file, sheet, id_list)
+        df = load_asset_prices_from_file_sheet(base_dir, file_name, sheet, id_list)
         await on_progress(f"LOADED {len(df.index)} rows from {file_name} [{sheet}]")
         all_price_dfs.append(df)
 

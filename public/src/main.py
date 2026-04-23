@@ -1,3 +1,4 @@
+import logging
 import os
 import traceback
 import marimo as mo
@@ -8,6 +9,9 @@ from public.src.result import Result, Ok, Err
 from public.src import backtest as bn
 from public.src import report as nr
 from public.src.monitor import monitor
+from public.src import data_validation as dv
+
+logger = logging.getLogger(__name__)
 
 def display(obj):
     mo.output.append(obj)
@@ -15,41 +19,59 @@ def display(obj):
 def get_settings_file_name() -> str:
     return 'main.xlsx'
 
+def get_settings_sheet_name() -> str:
+    return 'Main'
+
 def get_local_base_dir() -> str:
     return os.environ.get("DATA_PATH", "public/example")
 
 async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
-    monitor.clear()
-    await on_progress("Loading assets...")
-    data_load_result = await data_load_all(base_dir, on_progress, settings_file_path)
-    match data_load_result:
-        case Ok(data):
-            portfolio_df, asset_prices_available, assets_meta_df = data
-            await on_progress("Running backtest...")
-            backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
-            match backtest_result:
-                case Ok(data):
-                    await on_progress("Calculating results...")
-                    nr.show_results(data)
-                case Err(e):
-                    print(f"Error: {e}")
-                    traceback.print_exception(e)
-                    mo.stop(True, f"ERROR: {e}")
-        case Err(e):
-            print(f"Error: {e}")
-            mo.stop(True, f"ERROR: {e}")
+    try:
+        monitor.clear()
+        await on_progress("Loading assets...")
+        data_load_result = await data_load_all(base_dir, on_progress, settings_file_path)
+        if isinstance(data_load_result, Err):
+            return _handle_failure(data_load_result.error)
+
+        portfolio_df, asset_prices_available, assets_meta_df = data_load_result.unwrap()
+        await on_progress("Running backtest...")
+        backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
+        if isinstance(backtest_result, Err):
+            return _handle_failure(backtest_result.error)
+
+        await on_progress("Calculating results...")
+        nr.show_results(backtest_result.unwrap())
+    except Exception as e:
+        _handle_failure(e)
+
+def build_error_callout(header: str, body: str):
+    return mo.callout(mo.md(f"{header}\n\n{body}"), kind="danger")
+
+def _handle_failure(e: Exception):
+    logger.error("ERROR", exc_info=e)
+    if isinstance(e, dv.DataFileValidationError):
+        header = f"### 📋 Issue in {e.filename}"
+        body = "\n".join([f"* {err}" for err in e.errors])
+        mo.stop(True, build_error_callout(header, body))
+    elif isinstance(e, FileNotFoundError):
+        header = "### 📂❓File missing"
+        body = str(e)
+        mo.stop(True, build_error_callout(header, body))
+    else:
+        # Fallback for generic errors
+        header = "### ⚠️ Exception occured"
+        mo.stop(True, build_error_callout(header, str(e)))
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 
     try:
-
+        # LOAD DATA
         await on_progress("Loading the data")
 
-        # LOAD DATA
-
         # SETTINGS
-        start_date, end_date, base_currency, portfolio_files_df, asset_files_df = dl.load_settings(base_dir, settings_file)
-        print(f"Backtest from {start_date} to {end_date} using {base_currency} as base currency")
+        settings_sheet_name = get_settings_sheet_name()
+        start_date, end_date, base_currency, portfolio_files_df, asset_files_df = dl.load_settings(base_dir, settings_file, settings_sheet_name)
+        monitor.add(f"Backtest from {start_date:%Y-%m-%d} to {end_date:%Y-%m-%d} using {base_currency} as base currency")
 
         # LOAD PORTFOLIOS
         portfolio_df = dl.load_portfolios(portfolio_files_df, base_dir)
@@ -85,7 +107,7 @@ async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tup
         await on_progress("Loaded assets")
 
         # ADJUST START DATE ACCORDING TO AVAILABLE DATA
-        asset_prices_available = dc.adjust_start_to_available_data(asset_prices_proxied, start_date)
+        asset_prices_available = dc.adjust_asset_prices_start_to_available_data(assets_meta_df, asset_prices_proxied, start_date)
         # display(asset_prices_backtest)
 
         return Ok((portfolio_df, asset_prices_available, assets_meta_df))
