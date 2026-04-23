@@ -15,6 +15,9 @@ class Result(ABC, Generic[T, E]):
     def unwrap(self) -> T:
         """Extracts the value or raises an error."""
         pass
+    @abstractmethod
+    def and_then(self, func: Callable[[T], 'Result[U, E]']) -> 'Result[U, E]':
+        pass
 
 @dataclass(frozen=True)
 class Ok(Result[T, E]):
@@ -25,6 +28,9 @@ class Ok(Result[T, E]):
 
     def unwrap(self) -> T:
         return self.value
+    
+    def and_then(self, func: Callable[[T], 'Result[U, E]']) -> 'Result[U, E]':
+        return func(self.value)
 
 @dataclass(frozen=True)
 class Err(Result[T, E]):
@@ -35,3 +41,6 @@ class Err(Result[T, E]):
 
     def unwrap(self) -> T:
         raise ValueError(f"Called unwrap on an Error: {self.error}")
+    
+    def and_then(self, func: Callable[[Any], Any]) -> 'Err[T, E]':
+        return self

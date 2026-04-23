@@ -25,23 +25,22 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
     monitor.clear()
     await on_progress("Loading assets...")
     data_load_result = await data_load_all(base_dir, on_progress, settings_file_path)
-    match data_load_result:
-        case Ok(data):
-            portfolio_df, asset_prices_available, assets_meta_df = data
-            await on_progress("Running backtest...")
-            backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
-            match backtest_result:
-                case Ok(data):
-                    await on_progress("Calculating results...")
-                    nr.show_results(data)
-                case Err(e):
-                    logger.exception(e)
-                    traceback.print_exception(e)
-                    mo.stop(True, mo.callout(e, kind="danger"))
-                    
-        case Err(e):
-            logger.exception(e)
-            mo.stop(True, mo.callout(e, kind="danger"))
+    if isinstance(data_load_result, Err):
+        return _handle_failure(data_load_result.error)
+
+    portfolio_df, asset_prices_available, assets_meta_df = data_load_result.unwrap()
+    await on_progress("Running backtest...")
+    backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
+    if isinstance(backtest_result, Err):
+        return _handle_failure(backtest_result.error)
+
+    await on_progress("Calculating results...")
+    nr.show_results(backtest_result.unwrap())
+
+def _handle_failure(e: Exception):
+    """Centralized error track."""
+    logger.exception(e)
+    mo.stop(True, mo.callout(str(e), kind="danger"))
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 
