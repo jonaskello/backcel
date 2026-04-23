@@ -64,8 +64,8 @@ def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
     friendly_messages = {
         "invalid_row_names": "Invalid row names found: {values}. Use only currency, start, end, portfolios, or assets.",
         "missing_mandatory_rows": "Missing required settings. Ensure **currency**, **start**, and **end** rows exist.",
-        "empty_cells": "Empty values found. Please fill in all cells in the 'Value' column.",
-        "is_unique": "Duplicate names found: {values}. Certain keys should only appear once."
+        "not_nullable": "Empty values found. Please fill in all cells in the 'Value' column.",
+        "is_unique": "Duplicate names found: {values}."
     }
 
     # Group failures by the check name
