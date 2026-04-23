@@ -1,5 +1,6 @@
 import logging
 import os
+import traceback
 import marimo as mo
 import pandas as pd
 from public.src import data_clean as dc
