@@ -2,7 +2,7 @@ import os
 import traceback
 import marimo as mo
 import pandas as pd
-import pandera as pa
+import pandera.pandas as pa
 from public.src import data_clean as dc
 from public.src import data_load as dl
 from public.src.result import Result, Ok, Err

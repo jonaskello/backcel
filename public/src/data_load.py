@@ -1,9 +1,7 @@
 import os
 import logging
 import pandas as pd
-import pandera as pa
-
-import pandera as pa
+import pandera.pandas as pa
 
 SETTINGS_SCHEMA = pa.DataFrameSchema({
     "Name": pa.Column(
