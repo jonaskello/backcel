@@ -57,7 +57,7 @@ def load_portfolios(files_df, base_dir):
     for row in files_df.itertuples():
         file_name = os.path.join(base_dir, row.file)
         if not os.path.exists(file_name):
-            raise FileNotFoundError(file_name)
+            raise FileNotFoundError(row.file)
         df = pd.read_excel(file_name, row.sheet, index_col=0)
         
         # Drop columns that start with an underscore
@@ -96,7 +96,7 @@ def assets_meta(base_dir, files_df, base_currency):
     for row in files_df.itertuples():
         file_path = os.path.join(base_dir, row.file)
         if not os.path.exists(file_path):
-            raise FileNotFoundError(file_path)
+            raise FileNotFoundError(row.file)
             
         meta_df = pd.read_excel(file_path, sheet_name=row.sheet)
         meta_df.columns = meta_df.columns.str.lower()
@@ -145,7 +145,7 @@ def assets_meta(base_dir, files_df, base_currency):
 def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_ids):
     file_path = os.path.join(base_dir, file_name)
     if not os.path.exists(file_path):
-        raise FileNotFoundError(file_path)
+        raise FileNotFoundError(file_name)
     
     #  We need to see what columns actually exist in the file first
     # This avoids a ValueError if one of your needed_ids isn't in the Excel sheet
