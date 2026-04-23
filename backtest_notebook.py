@@ -79,7 +79,8 @@ async def _(dlm, download_btn, fm, get_base_path, os):
     base_dir = get_base_path()
     mo.stop(base_dir == "")
 
-    settings_file_path = os.path.join(base_dir, dlm.get_settings_file_name())
+    settings_file_name = dlm.get_settings_file_name()
+    settings_file_path = os.path.join(base_dir, settings_file_name)
     run_btn = mo.ui.run_button(label="🚀 Run backtest")
 
     if download_btn.value:
@@ -100,11 +101,11 @@ async def _(dlm, download_btn, fm, get_base_path, os):
             mo.output.replace(mo.md(f"FAILED: File {settings_file_path} not found. Create it or copy an example file to get started."))
     else:
         mo.output.replace(run_btn)
-    return base_dir, run_btn, settings_file_path
+    return base_dir, run_btn, settings_file_name
 
 
 @app.cell
-async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
+async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_name):
     # RUN BACKTEST
 
     import traceback
@@ -121,7 +122,7 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
                 _spinner.update(msg)
                 await asyncio.sleep(0.1)
 
-            await dlm.run_full_backtest(base_dir, on_progress, settings_file_path)
+            await dlm.run_full_backtest(base_dir, on_progress, settings_file_name)
     return
 
 
