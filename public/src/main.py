@@ -58,6 +58,8 @@ def _handle_failure(e: Exception):
 
 def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
     df = e.failure_cases
+    fname = getattr(e, 'filename', 'Excel File')
+
     # Use a simple dict to translate check names to English
     msgs = {
         "invalid_row_names": "Invalid row names: {}. Use only allowed names.",
@@ -74,7 +76,7 @@ def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
         msg = msgs.get(name, f"Error: {name}")
         results.append(msg.format(vals))
 
-    content = "### 📋 Excel File Issue\n\n" + "\n".join([f"* {m}" for m in results])
+    content = f"### 📋 Issue in {fname}\n\n" + "\n".join([f"* {m}" for m in results])
     return mo.callout(mo.md(content), kind="danger")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:

@@ -38,7 +38,11 @@ def load_settings(base_dir: str, settings_file: str):
     if "Name" in settings_df.columns:
         settings_df = settings_df[~settings_df['Name'].str.startswith('_', na=False)]
     # Validate the file
-    SETTINGS_SCHEMA.validate(settings_df, lazy=True)
+    try:
+        settings_df = SETTINGS_SCHEMA.validate(settings_df, lazy=True)
+    except pa.errors.SchemaErrors as e:
+        e.filename = settings_file 
+        raise e
 
     # Get settings for currency and dates
     base_currency = settings_df.loc[settings_df['Name'] == 'currency', 'Value'].iloc[0]
