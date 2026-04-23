@@ -109,7 +109,7 @@ def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, as
     
     # Log limiting asset
     if not assets_with_nans.empty:
-        monitor.add(f"\nWARNING: Portfolio Assets with Missing Data after {start_date}")
+        monitor.add(f"\nWARNING: Portfolio Assets with Missing Data after {start_date:%Y-%m-%d}")
         first_indices = asset_prices.apply(lambda col: col.first_valid_index())
         valid_indices = first_indices.dropna()
         if not valid_indices.empty:
