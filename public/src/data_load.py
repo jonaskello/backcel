@@ -15,14 +15,14 @@ def parse_excel_path(path_str, default_file):
     # If no '!', assume it's a sheet in the main settings file
     return {"file": default_file, "sheet": path_str}
 
-def load_settings(base_dir: str, settings_file: str):
+def load_settings(base_dir: str, settings_file: str, sheet_name: str):
     settings_path = os.path.join(base_dir, settings_file)
-    settings_df = pd.read_excel(settings_path, sheet_name='Main')
+    settings_df = pd.read_excel(settings_path, sheet_name=sheet_name)
     # Filter out any rows where the Name starts with "_"
     if "Name" in settings_df.columns:
         settings_df = settings_df[~settings_df['Name'].str.startswith('_', na=False)]
     # Validate the file
-    dv.validate_settings(settings_df, settings_file)
+    dv.validate_settings(settings_df, settings_file, sheet_name)
 
     # Get settings for currency and dates
     base_currency = settings_df.loc[settings_df['Name'] == 'currency', 'Value'].iloc[0]

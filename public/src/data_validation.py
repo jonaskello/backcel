@@ -10,7 +10,7 @@ class DataFileValidationError(Exception):
         # Initialize parent with a summary string
         super().__init__(f"Validation failed for {filename}: {len(errors)} errors found.")
 
-def validate_settings(df: pd.DataFrame, filename: str):
+def validate_settings(df: pd.DataFrame, filename: str, sheet_name: str):
     if 'Name' not in df.columns:
         raise DataFileValidationError([f"Column **'Name'** is missing."], filename)
     if 'Value' not in df.columns:
@@ -42,7 +42,7 @@ def validate_settings(df: pd.DataFrame, filename: str):
         errors.append(f"Duplicate rows found for: **{', '.join(sorted(duplicates))}** (must only appear once)")
 
     if errors:
-        raise DataFileValidationError(errors, filename)
+        raise DataFileValidationError(errors, filename + "!" + sheet_name)
 
 def validate_assets_meta(meta_map: dict[str, pd.DataFrame]):
     errors = []

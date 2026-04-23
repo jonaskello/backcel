@@ -18,6 +18,9 @@ def display(obj):
 def get_settings_file_name() -> str:
     return 'main.xlsx'
 
+def get_settings_sheet_name() -> str:
+    return 'Main'
+
 def get_local_base_dir() -> str:
     return os.environ.get("DATA_PATH", "public/example")
 
@@ -62,7 +65,8 @@ async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tup
         await on_progress("Loading the data")
 
         # SETTINGS
-        start_date, end_date, base_currency, portfolio_files_df, asset_files_df = dl.load_settings(base_dir, settings_file)
+        settings_sheet_name = get_settings_sheet_name()
+        start_date, end_date, base_currency, portfolio_files_df, asset_files_df = dl.load_settings(base_dir, settings_file, settings_sheet_name)
         monitor.add(f"Backtest from {start_date:%Y-%m-%d} to {end_date:%Y-%m-%d} using {base_currency} as base currency")
 
         # LOAD PORTFOLIOS
