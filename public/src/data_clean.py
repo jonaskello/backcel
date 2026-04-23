@@ -102,8 +102,6 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                             
     return filled_prices
 
-from datetime import datetime
-
 def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.DataFrame:
     # Identify assets with ANY missing prices in this range
     missing_data = df.isnull().sum()
