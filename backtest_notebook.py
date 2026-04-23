@@ -4,6 +4,7 @@
 #     "anywidget>=0.10.0",
 #     "openpyxl>=3.1.5",
 #     "plotly>=6.7.0",
+#     "pandera>=0.31.1",
 # ]
 # ///
 

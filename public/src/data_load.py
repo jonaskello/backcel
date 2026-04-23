@@ -1,9 +1,23 @@
-import pandas as pd
 import os
 import logging
-
-import os
 import pandas as pd
+import pandera as pa
+
+SETTINGS_SCHEMA = pa.DataFrameSchema({
+    "Name": pa.Column(
+        str, 
+        checks=[
+            # Ensure only allowed keys exist
+            pa.Check.isin(['currency', 'start', 'end', 'portfolios', 'assets']),
+            # Custom check: Ensure the mandatory singleton keys exist
+            pa.Check(lambda s: all(k in s.values for k in ['currency', 'start', 'end']), 
+                     name="check_mandatory_keys")
+        ],
+        # unique=True removed to allow multiple 'assets'/'portfolios'
+        unique=False 
+    ),
+    "Value": pa.Column(object)
+})
 
 def parse_excel_path(path_str, default_file):
     path_str = str(path_str).strip()
