@@ -1,5 +1,8 @@
 import os
+import io
+import sys
 import logging
+from typing import Any, Callable, Sequence
 import pandas as pd
 from public.src import data_validation as dv
 import logging
@@ -17,7 +20,8 @@ def parse_excel_path(path_str, default_file):
 
 def load_settings(base_dir: str, settings_file: str, sheet_name: str):
     settings_path = os.path.join(base_dir, settings_file)
-    settings_df = pd.read_excel(settings_path, sheet_name=sheet_name)
+    # settings_df = pd.read_excel(settings_path, sheet_name=sheet_name)
+    settings_df = read_excel_with_workarounds(settings_path, sheet_name=sheet_name)
     # Filter out any rows where the Name starts with "_"
     if "Name" in settings_df.columns:
         settings_df = settings_df[~settings_df['Name'].str.startswith('_', na=False)]
@@ -58,7 +62,8 @@ def load_portfolios(files_df, base_dir):
         file_name = os.path.join(base_dir, row.file)
         if not os.path.exists(file_name):
             raise FileNotFoundError(row.file)
-        df = pd.read_excel(file_name, row.sheet, index_col=0)
+        # df = pd.read_excel(file_name, row.sheet, index_col=0)
+        df = read_excel_with_workarounds(file_name, row.sheet, index_col=0)
         
         # Drop columns that start with an underscore
         cols_to_drop = [c for c in df.columns if c.startswith('_')]
@@ -98,7 +103,8 @@ def assets_meta(base_dir, files_df, base_currency):
         if not os.path.exists(file_path):
             raise FileNotFoundError(row.file)
             
-        meta_df = pd.read_excel(file_path, sheet_name=row.sheet)
+        # meta_df = pd.read_excel(file_path, sheet_name=row.sheet)
+        meta_df = read_excel_with_workarounds(file_path, sheet_name=row.sheet)
         meta_df.columns = meta_df.columns.str.lower()
         if 'id' in meta_df.columns:
             meta_df = meta_df.set_index('id')
@@ -150,7 +156,8 @@ def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_id
     #  We need to see what columns actually exist in the file first
     # This avoids a ValueError if one of your needed_ids isn't in the Excel sheet
     try:
-        preview = pd.read_excel(file_path, sheet_name=sheet_name, nrows=0)
+        # preview = pd.read_excel(file_path, sheet_name=sheet_name, nrows=0)
+        preview = read_excel_with_workarounds(file_path, sheet_name=sheet_name, nrows=0)
     except ValueError:
         raise dv.DataFileValidationError([f"Worksheet named **'{sheet_name}'** not found."], file_path)
 
@@ -163,7 +170,7 @@ def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_id
     valid_cols = [date_col] + [id for id in needed_ids if id in preview.columns]
 
     # Load only the necessary columns
-    assets_prices_df = pd.read_excel(
+    assets_prices_df = read_excel_with_workarounds(
         file_path, 
         sheet_name=sheet_name, 
         index_col=0, 
@@ -241,3 +248,45 @@ def normalized_asset_prices(assets_meta_df, fx_data, assets_prices_df, base_curr
     assets_normalized = assets_prices_df * multipliers
 
     return assets_normalized
+
+
+    # assets_prices_df = read_excel_with_workarounds(
+    #     file_path, 
+    #     sheet_name=sheet_name, 
+    #     index_col=0, 
+    #     parse_dates=[0], 
+    #     usecols=valid_cols
+    # )
+
+
+def read_excel_with_workarounds(file_path: str, sheet_name: str, index_col: int | str | None = None, nrows: int | None = None, usecols = None, parse_dates = None) -> pd.DataFrame:
+    try:
+        # First attempt: Read directly
+        df = pd.read_excel(file_path, sheet_name=sheet_name, index_col=index_col, nrows=nrows, usecols=usecols, parse_dates=parse_dates)
+        return df
+    except PermissionError as e:
+        if sys.platform == "win32":
+            import win32file
+            import win32con
+            # If the file is in a onedrive folder and excel is open the read will fail unless we use this method
+            # Request a handle that ignores existing write locks
+            handle = win32file.CreateFile(
+                file_path,
+                win32con.GENERIC_READ,
+                win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE | win32con.FILE_SHARE_DELETE,
+                None,
+                win32con.OPEN_EXISTING,
+                win32con.FILE_ATTRIBUTE_NORMAL,
+                None
+            )
+            # Read the file content into memory via the handle
+            _, data = win32file.ReadFile(handle.handle, os.path.getsize(file_path))
+            win32file.CloseHandle(handle.handle)
+            if isinstance(data, str):
+                data = data.encode('utf-8')
+            # Convert bytes to a file-like object for pandas
+            df = pd.read_excel(io.BytesIO(data), sheet_name=sheet_name, index_col=index_col, nrows=nrows)
+            return df
+        else:
+            raise e
+
