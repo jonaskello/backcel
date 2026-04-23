@@ -7,23 +7,25 @@ import pandera as pa
 
 SETTINGS_SCHEMA = pa.DataFrameSchema({
     "Name": pa.Column(
-        str, 
+        str,
         checks=[
             pa.Check.isin(
                 ['currency', 'start', 'end', 'portfolios', 'assets'], 
-                name="invalid_row_names"
+                name="invalid_row_names",
+                # This 'error' string is what shows up in e.failure_cases['check']
+                error="invalid_row_names" 
             ),
             pa.Check(
-                lambda s: all(k in s.values for k in ['currency', 'start', 'end']), 
-                name="missing_mandatory_rows"
+                lambda s: all(k in s.values for k in ['currency', 'start', 'end']),
+                name="missing_mandatory_rows",
+                # This 'error' string replaces the technical lambda string
+                error="missing_mandatory_rows", 
+                element_wise=False 
             )
         ],
-        nullable=False # This replaces the broken Check.not_null()
+        nullable=False
     ),
-    "Value": pa.Column(
-        object, 
-        nullable=False # Ensures the 'Value' column isn't empty
-    )
+    "Value": pa.Column(object, nullable=False)
 })
 
 def parse_excel_path(path_str, default_file):

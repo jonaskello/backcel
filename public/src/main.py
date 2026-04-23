@@ -60,25 +60,24 @@ def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
     df = e.failure_cases
     msg_list = []
 
-    # Map our CUSTOM NAMES to friendly messages
-    friendly_messages = {
-        "invalid_row_names": "Invalid row names found: {values}. Use only currency, start, end, portfolios, or assets.",
-        "missing_mandatory_rows": "Missing required settings. Ensure **currency**, **start**, and **end** rows exist.",
-        "not_nullable": "Empty values found. Please fill in all cells in the 'Value' column.",
-        "is_unique": "Duplicate names found: {values}."
+    # Map the exact 'error' strings from your schema
+    ui_map = {
+        "invalid_row_names": "Invalid row names: {values}. Use only currency, start, end, portfolios, or assets.",
+        "missing_mandatory_rows": "Missing required rows. Ensure **currency**, **start**, and **end** exist.",
+        "not_nullable": "Empty values found. Please fill in all cells in the 'Value' column."
     }
 
-    # Group failures by the check name
     for check_id in df['check'].unique():
-        # Get specific failure cases for this named check
-        bad_values = df[df['check'] == check_id]['failure_case'].unique()
-        val_str = ", ".join([f"`{v}`" for v in bad_values if v is not False and v is not None])
+        failures = df[df['check'] == check_id]['failure_case']
+        # Clean up the failure list (remove False/NaN)
+        clean_failures = [f"`{v}`" for v in failures.unique() if v not in [False, None] and not pd.isna(v)]
+        val_str = ", ".join(clean_failures)
         
-        # Get the template
-        template = friendly_messages.get(check_id, f"Validation error ({check_id}): {val_str}")
+        # Direct lookup - no string manipulation
+        template = ui_map.get(check_id, f"Error: {check_id}")
         msg_list.append(template.format(values=val_str))
 
-    content = "### 📋 Excel Configuration Error\n" + "\n".join([f"* {m}" for m in msg_list])
+    content = "### 📋 Settings File Issue\n\n" + "\n".join([f"* {m}" for m in msg_list])
     return mo.callout(mo.md(content), kind="danger")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
