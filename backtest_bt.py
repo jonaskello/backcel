@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.1"
+__generated_with = "0.23.2"
 app = marimo.App()
 
 
@@ -31,7 +31,7 @@ async def _():
 
 
 @app.cell
-def _(asset_prices_available, assets_meta_df, mo, portfolio_df):
+def _(asset_prices_available, assets_meta_df, portfolio_df):
     # RUN BACKTEST
     import traceback
     from public.src import bt_backtest as b
@@ -39,15 +39,16 @@ def _(asset_prices_available, assets_meta_df, mo, portfolio_df):
     from public.src.result import Ok, Err
 
     res = b.portfolio_backtest(portfolio_df, asset_prices_available, assets_meta_df)
-    backtest_result = nb.run_backtest_all(asset_prices_available, portfolio_df)
-    match backtest_result:
-        case Ok(data):
-            nat_returns, nat_weights = data
-        case Err(e):
-            print(f"Error: {e}")
-            traceback.print_exception(e)
-            mo.stop(True, f"ERROR: {e}")
-    return nat_returns, res
+    backtest_result = nb.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
+    # match backtest_result:
+    #     case Ok(data):
+    #         nat_returns = data.combined_returns
+    #         nat_weights = data.portfolios
+    #     case Err(e):
+    #         print(f"Error: {e}")
+    #         traceback.print_exception(e)
+    #         mo.stop(True, f"ERROR: {e}")
+    return backtest_result, res
 
 
 @app.cell
@@ -69,13 +70,13 @@ def _():
 
 
 @app.cell
-def _(display, display_df, nat_returns, res):
+def _(backtest_result, display, display_df, res):
     # PRINT RESULTS
     from public.src import bt_report as r
     from public.src import report as nr
 
     display(r.portfolio_summary(res))
-    display_df(nr.get_stats(nat_returns))
+    display_df(nr.get_stats(backtest_result.unwrap()))
 
     # res.stats
     # display(res.prices)
