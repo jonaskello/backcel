@@ -103,7 +103,6 @@ def assets_meta(base_dir, files_df, base_currency):
             
         meta_df = pd.read_excel(file_path, sheet_name=sheet_name, index_col="ID")
         meta_df.columns = meta_df.columns.str.lower()
-        
         meta_df = meta_df[meta_df.index.notna()]
 
         # Split "prices" column to file and sheet
@@ -134,6 +133,7 @@ def assets_meta(base_dir, files_df, base_currency):
         return pd.DataFrame()
 
     combined_df = pd.concat(all_meta)
+    dv.validate_assets_meta(combined_df, "Asset Metadata Sheets")
 
     if combined_df.index.duplicated().any():
         total_dupes = combined_df.index[combined_df.index.duplicated()].unique().tolist()
