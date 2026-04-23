@@ -102,15 +102,15 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                             
     return filled_prices
 
-def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.DataFrame:
+def adjust_asset_prices_start_to_available_data(asset_prices: pd.DataFrame, start_date: date) -> pd.DataFrame:
     # Identify assets with ANY missing prices in this range
-    missing_data = df.isnull().sum()
+    missing_data = asset_prices.isnull().sum()
     assets_with_nans = missing_data[missing_data > 0]
     
     # Log limiting asset
     if not assets_with_nans.empty:
         monitor.add(f"\nWARNING: Portfolio Assets with Missing Data after {start_date}")
-        first_indices = df.apply(lambda col: col.first_valid_index())
+        first_indices = asset_prices.apply(lambda col: col.first_valid_index())
         valid_indices = first_indices.dropna()
         if not valid_indices.empty:
             limiting_asset = valid_indices.idxmax()
@@ -119,7 +119,7 @@ def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.Dat
             monitor.add(f"Limiting Asset: {limiting_asset} (starts {latest_date})")
 
     # Drop rows with any missing values
-    final_df = df.dropna()
+    final_df = asset_prices.dropna()
     
     # Check if we have data left and print the actual start date
     if not final_df.empty:
