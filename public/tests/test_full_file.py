@@ -26,40 +26,42 @@ async def test_full_engine_run(test_file):
 
     print(f"\n\n----RUNNING TEST FILE {test_file}")
     base_dir = "./public/tests/data"
-    data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
     expected_values, expected_weights, expected_stats = await load_expected(base_dir, test_file)
-    match data_load_result:
-        case Ok(actual):
-            portfolio_df, asset_prices_available, assets_meta_df = actual
-            backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
-            match backtest_result:
-                case Ok(actual):
-                    # Assert weights
-                    for p_name, p_result in actual.portfolios.items():
-                        # expected_weights_df has MultiIndex columns (Portfolio, Asset)
-                        expected_p_weights = expected_weights[[p_name]]
-                        expected_p_weights = expected_weights[[p_name]].droplevel(0, axis=1)
-                        pd.testing.assert_frame_equal(
-                            p_result.weights, 
-                            expected_p_weights, 
-                            obj=f"Weights Mismatch for Portfolio: {p_name}",
-                            atol=1e-5
-                        )
 
-                    # Assert cumulative growth (1.0 basis)
-                    portfolio_values = (1 + actual.combined_returns).cumprod()
-                    pd.testing.assert_frame_equal(portfolio_values, expected_values)
+    # Data load
+    data_load_result = await dlm.data_load_all(base_dir, on_progress, test_file)
+    if isinstance(data_load_result, Err):
+        e = data_load_result.error
+        raise e
 
-                    # Assert stats
-                    actual_stats = r.get_stats(actual)
-                    pd.testing.assert_frame_equal(actual_stats, expected_stats)
+    # Backtest
+    portfolio_df, asset_prices_available, assets_meta_df = data_load_result.unwrap()
+    backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
+    if isinstance(backtest_result, Err):
+        e = backtest_result.error
+        raise e
+    actual = backtest_result.unwrap()
 
-                case Err(e):
-                    pytest.fail(f"Error: {e}")
-                    traceback.print_exception(e)
-        case Err(e):
-            traceback.print_exception(e)
-            pytest.fail(f"Error: {e}")
+    # Assert weights
+    for p_name, p_result in actual.portfolios.items():
+        # expected_weights_df has MultiIndex columns (Portfolio, Asset)
+        expected_p_weights = expected_weights[[p_name]]
+        expected_p_weights = expected_weights[[p_name]].droplevel(0, axis=1)
+        pd.testing.assert_frame_equal(
+            p_result.weights, 
+            expected_p_weights, 
+            obj=f"Weights Mismatch for Portfolio: {p_name}",
+            atol=1e-5
+        )
+
+    # Assert cumulative growth (1.0 basis)
+    portfolio_values = (1 + actual.combined_returns).cumprod()
+    pd.testing.assert_frame_equal(portfolio_values, expected_values)
+
+    # Assert stats
+    actual_stats = r.get_stats(actual)
+    pd.testing.assert_frame_equal(actual_stats, expected_stats)
+
 
 async def load_expected(base_dir, test_file):
     file_path = os.path.join(base_dir, test_file)
