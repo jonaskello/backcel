@@ -107,18 +107,14 @@ def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.Dat
     missing_data = df.isnull().sum()
     assets_with_nans = missing_data[missing_data > 0]
     
+    # Log limiting asset
     if not assets_with_nans.empty:
         monitor.add(f"\nWARNING: Portfolio Assets with Missing Data after {start_date}")
-
-        # IMPROVEMENT: Use apply to get all start dates in one vectorized pass
         first_indices = df.apply(lambda col: col.first_valid_index())
         valid_indices = first_indices.dropna()
-        
         if not valid_indices.empty:
-            # idxmax gets the asset name, max gets the date
             limiting_asset = valid_indices.idxmax()
             latest_idx = valid_indices.max()
-            
             latest_date = pd.to_datetime(str(latest_idx)).date()
             monitor.add(f"Limiting Asset: {limiting_asset} (starts {latest_date})")
 
