@@ -37,24 +37,23 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
     await on_progress("Calculating results...")
     nr.show_results(backtest_result.unwrap())
 
+def build_error_callout(header: str, body: str):
+    return mo.callout(mo.md(f"{header}\n\n{body}"), kind="danger")
+
 def _handle_failure(e: Exception):
     logger.error("ERROR", exc_info=e)
     if isinstance(e, dv.DataFileValidationError):
-        content = format_validation_error(e)
-        mo.stop(True, content)
-        
+        header = f"### 📋 Issue in {e.filename}"
+        body = "\n".join([f"* {err}" for err in e.errors])
+        mo.stop(True, build_error_callout(header, body))
     elif isinstance(e, FileNotFoundError):
-        mo.stop(True, mo.callout(f"File not found: {e.filename}", kind="danger"))
-        
+        header = "### File missing"
+        body = str(e)
+        mo.stop(True, build_error_callout(header, body))
     else:
         # Fallback for generic errors
-        mo.stop(True, mo.callout(str(e), kind="danger"))
-
-
-def format_validation_error(e: dv.DataFileValidationError) -> mo.Html:
-    header = f"### 📋 Issue in {e.filename}"
-    body = "\n".join([f"* {err}" for err in e.errors])
-    return mo.callout(mo.md(f"{header}\n\n{body}"), kind="danger")
+        header = "### 📋 Exception occured"
+        mo.stop(True, build_error_callout(header, str(e)))
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 
