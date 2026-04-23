@@ -7,17 +7,18 @@ SETTINGS_SCHEMA = pa.DataFrameSchema({
     "Name": pa.Column(
         str,
         checks=[
-            # Use the constructor + name to override the technical string
-            pa.Check(lambda s: s.isin(['currency', 'start', 'end', 'portfolios', 'assets']), 
+            pa.Check(lambda s: s.isin(['currency', 'start', 'end', 'portfolios', 'assets']) | s.str.startswith("_"), 
                      name="invalid_row_names"),
             
-            pa.Check(lambda s: all(k in s.values for k in ['currency', 'start', 'end']),
-                     name="missing_mandatory_rows", 
-                     element_wise=False)
-        ],
-        nullable=False
-    ),
-    "Value": pa.Column(object, nullable=False)
+            pa.Check(
+                lambda s: all(k in s.values for k in ['currency', 'start', 'end']),
+                name="missing_mandatory_rows",
+                element_wise=False,
+                # Store the missing items in metadata during the check
+                metadata={"required": ['currency', 'start', 'end']}
+            )
+        ]
+    )
 })
 
 def parse_excel_path(path_str, default_file):

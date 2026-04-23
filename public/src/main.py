@@ -57,26 +57,33 @@ def _handle_failure(e: Exception):
 
 
 def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
-    df = e.failure_cases
+    df_err = e.failure_cases
     fname = getattr(e, 'filename', 'Excel File')
+    results = []
 
-    # Use a simple dict to translate check names to English
-    msgs = {
-        "invalid_row_names": "Invalid row names: {}. Use only allowed names.",
-        "missing_mandatory_rows": "Missing mandatory rows (currency, start, or end).",
-        "not_nullable": "Empty values found in 'Value' column."
+    # Map check names to user-friendly templates
+    templates = {
+        "invalid_row_names": "Invalid row names found: {values}. Use only allowed names.",
+        "missing_mandatory_rows": "Missing required rows: {values}."
     }
 
-    results = []
-    for name in df['check'].unique():
-        # Extract actual values, skipping 'False' booleans from the 'all()' check
-        bad_vals = df[df['check'] == name]['failure_case'].unique()
-        vals = ", ".join([f"`{v}`" for v in bad_vals if v not in [False, None]])
+    for check_id in df_err['check'].unique():
+        relevant_failures = df_err[df_err['check'] == check_id]
         
-        msg = msgs.get(name, f"Error: {name}")
-        results.append(msg.format(vals))
+        if check_id == "missing_mandatory_rows":
+            # Extract missing keys by checking which required keys aren't in the data
+            required = ['currency', 'start', 'end']
+            existing = relevant_failures['column'].unique() # Pandera tracks what was checked
+            # Or simpler: just calculate based on the current 'Name' column if available
+            missing = [k for k in required if k not in e.data['Name'].values]
+            val_str = ", ".join([f"**{m}**" for m in missing])
+        else:
+            bad_vals = relevant_failures['failure_case'].unique()
+            val_str = ", ".join([f"`{v}`" for v in bad_vals if v not in [False, None]])
 
-    content = f"### 📋 Issue in {fname}\n\n" + "\n".join([f"* {m}" for m in results])
+        results.append(templates.get(check_id, f"Error: {check_id}").format(values=val_str))
+
+    content = f"### 📋 Issue in {fname}\n\n" + "\n".join([f"* {r}" for r in results])
     return mo.callout(mo.md(content), kind="danger")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
