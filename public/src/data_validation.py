@@ -8,6 +8,11 @@ class DataFileValidationError(Exception):
         super().__init__(f"Validation failed for {filename}: {len(errors)} errors found.")
 
 def validate_settings(df: pd.DataFrame, filename: str):
+    if 'Name' not in df.columns:
+        raise DataFileValidationError([f"Column **'Name'** is missing from the sheet."], filename)
+    if 'Value' not in df.columns:
+        raise DataFileValidationError([f"Column **'Value'** is missing from the sheet."], filename)
+
     required = {'currency', 'start', 'end'}
     allowed = required | {'portfolios', 'assets'}
     
