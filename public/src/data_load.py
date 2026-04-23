@@ -246,16 +246,23 @@ def normalized_asset_prices(assets_meta_df, fx_data, assets_prices_df, base_curr
     return assets_normalized
 
 def read_excel_with_workarounds(file_path: str, sheet_name: str, index_col: int | str | None = None, nrows: int | None = None, usecols = None, parse_dates: Any = None) -> pd.DataFrame:
+    # Build a dictionary of arguments that are NOT None
+    kwargs = {
+        "sheet_name": sheet_name,
+        "index_col": index_col,
+        "nrows": nrows,
+        "usecols": usecols,
+    }
+    if parse_dates is not None:
+        kwargs["parse_dates"] = parse_dates
     try:
-        # First attempt: Read directly
-        df = pd.read_excel(file_path, sheet_name=sheet_name, index_col=index_col, nrows=nrows, usecols=usecols, parse_dates=parse_dates)
-        return df
+        # First attempt: Read directly using unpacked kwargs
+        return pd.read_excel(file_path, **kwargs)
     except PermissionError as e:
         if sys.platform == "win32":
             import win32file
             import win32con
-            # If the file is in a onedrive folder and excel is open the read will fail unless we use this method
-            # Request a handle that ignores existing write locks
+            
             handle = win32file.CreateFile(
                 file_path,
                 win32con.GENERIC_READ,
@@ -265,14 +272,15 @@ def read_excel_with_workarounds(file_path: str, sheet_name: str, index_col: int 
                 win32con.FILE_ATTRIBUTE_NORMAL,
                 None
             )
-            # Read the file content into memory via the handle
-            _, data = win32file.ReadFile(handle.handle, os.path.getsize(file_path))
+            
+            file_size = os.path.getsize(file_path)
+            _, data = win32file.ReadFile(handle.handle, file_size)
             win32file.CloseHandle(handle.handle)
+            
             if isinstance(data, str):
                 data = data.encode('utf-8')
-            # Convert bytes to a file-like object for pandas
-            df = pd.read_excel(io.BytesIO(data), sheet_name=sheet_name, index_col=index_col, nrows=nrows, usecols=usecols, parse_dates=parse_dates)
-            return df
+                
+            # Use the same cleaned kwargs for the BytesIO read
+            return pd.read_excel(io.BytesIO(data), **kwargs)
         else:
             raise e
-
