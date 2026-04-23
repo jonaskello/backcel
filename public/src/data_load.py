@@ -97,11 +97,11 @@ def assets_meta(base_dir, files_df, base_currency):
 
     for row in files_df.itertuples():
         file_path = os.path.join(base_dir, row.file)
-        sheet_name = row.sheet
+        # sheet_name = row.sheet
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Data file not found: {file_path}")
             
-        meta_df = pd.read_excel(file_path, sheet_name=sheet_name, index_col="ID")
+        meta_df = pd.read_excel(file_path, sheet_name=row.sheet, index_col="ID")
         meta_df.columns = meta_df.columns.str.lower()
         meta_df = meta_df[meta_df.index.notna()]
 
@@ -125,9 +125,9 @@ def assets_meta(base_dir, files_df, base_currency):
         
         missing = [c for c in required_cols if c not in meta_df.columns]
         if missing:
-            print(f"⚠️ Warning: {file_path} [{sheet_name}] is missing columns: {missing}")
+            print(f"⚠️ Warning: {file_path} [{row.sheet}] is missing columns: {missing}")
 
-        all_meta[row.file] = meta_df
+        all_meta[row.file + "!" + row.sheet] = meta_df
     
     if not all_meta:
         return pd.DataFrame()
