@@ -58,27 +58,23 @@ def _handle_failure(e: Exception):
 
 def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
     df = e.failure_cases
-    msg_list = []
-
-    # Map the exact 'error' strings from your schema
-    ui_map = {
-        "invalid_row_names": "Invalid row names: {values}. Use only currency, start, end, portfolios, or assets.",
-        "missing_mandatory_rows": "Missing required rows. Ensure **currency**, **start**, and **end** exist.",
-        "not_nullable": "Empty values found. Please fill in all cells in the 'Value' column."
+    # Use a simple dict to translate check names to English
+    msgs = {
+        "invalid_row_names": "Invalid row names: {}. Use only allowed names.",
+        "missing_mandatory_rows": "Missing mandatory rows (currency, start, or end).",
+        "not_nullable": "Empty values found in 'Value' column."
     }
 
-    for check_id in df['check'].unique():
-        failures = df[df['check'] == check_id]['failure_case']
-        # Clean up the failure list (remove False/NaN)
-        clean_failures = [f"`{v}`" for v in failures.unique() if v not in [False, None] and not pd.isna(v)]
-        val_str = ", ".join(clean_failures)
+    results = []
+    for name in df['check'].unique():
+        # Extract actual values, skipping 'False' booleans from the 'all()' check
+        bad_vals = df[df['check'] == name]['failure_case'].unique()
+        vals = ", ".join([f"`{v}`" for v in bad_vals if v not in [False, None]])
         
-        # Direct lookup - no string manipulation
-        template = ui_map.get(check_id, f"Error: {check_id}")
-        msg_list.append(template.format(values=val_str))
+        msg = msgs.get(name, f"Error: {name}")
+        results.append(msg.format(vals))
 
-    content = "### 📋 Settings File Issue\n\n" + "\n".join([f"* {m}" for m in msg_list])
-    return mo.callout(mo.md(content), kind="danger")
+    return mo.callout(mo.md("\n".join([f"* {r}" for r in results])), kind="danger")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 

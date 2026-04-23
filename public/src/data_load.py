@@ -9,19 +9,12 @@ SETTINGS_SCHEMA = pa.DataFrameSchema({
     "Name": pa.Column(
         str,
         checks=[
-            pa.Check.isin(
-                ['currency', 'start', 'end', 'portfolios', 'assets'], 
-                name="invalid_row_names",
-                # This 'error' string is what shows up in e.failure_cases['check']
-                error="invalid_row_names" 
-            ),
-            pa.Check(
-                lambda s: all(k in s.values for k in ['currency', 'start', 'end']),
-                name="missing_mandatory_rows",
-                # This 'error' string replaces the technical lambda string
-                error="missing_mandatory_rows", 
-                element_wise=False 
-            )
+            # element_wise=True ensures failure_case is the actual string value
+            pa.Check.isin(['currency', 'start', 'end', 'portfolios', 'assets'], 
+                          name="invalid_row_names", element_wise=True),
+            # element_wise=False for checks that look at the whole column
+            pa.Check(lambda s: all(k in s.values for k in ['currency', 'start', 'end']),
+                     name="missing_mandatory_rows", element_wise=False)
         ],
         nullable=False
     ),
