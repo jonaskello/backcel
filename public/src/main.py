@@ -38,11 +38,6 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
     await on_progress("Calculating results...")
     nr.show_results(backtest_result.unwrap())
 
-# def _handle_failure(e: Exception):
-#     logger.error("Backtest failed", exc_info=e)
-#     mo.stop(True, mo.callout(str(e), kind="danger"))
-
-
 def _handle_failure(e: Exception):
     # 1. Log the full traceback for the developer
     logger.error("Operation failed", exc_info=e)
