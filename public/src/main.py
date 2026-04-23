@@ -49,7 +49,7 @@ async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tup
 
         # SETTINGS
         start_date, end_date, base_currency, portfolio_files_df, asset_files_df = dl.load_settings(base_dir, settings_file)
-        print(f"Backtest from {start_date} to {end_date} using {base_currency} as base currency")
+        monitor.add(f"Backtest from {start_date:%Y-%m-%d} to {end_date:%Y-%m-%d} using {base_currency} as base currency")
 
         # LOAD PORTFOLIOS
         portfolio_df = dl.load_portfolios(portfolio_files_df, base_dir)
