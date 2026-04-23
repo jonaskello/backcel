@@ -85,3 +85,27 @@ def validate_assets_meta(meta_map: dict[str, pd.DataFrame]):
 
     if errors:
         raise DataFileValidationError(errors, "Asset Files")
+
+def validate_asset_prices(df: pd.DataFrame, file_name: str, sheet_name: str, needed_ids: list):
+    errors = []
+    context = f"{file_name}!{sheet_name}"
+
+    missing = [id for id in needed_ids if id not in df.columns]
+    if missing:
+        errors.append(f"[{context}] Missing IDs: `{', '.join(missing)}`.")
+
+    if not pd.api.types.is_datetime64_any_dtype(df.index):
+        errors.append(f"[{context}] First column must contain valid dates.")
+
+    for col in df.columns:
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            errors.append(f"[{context}] Column **'{col}'** contains non-numeric values.")
+
+    if df.index.duplicated().any():
+        dupe_series = pd.to_datetime(df.index[df.index.duplicated()].unique())
+        dupes = dupe_series.strftime('%Y-%m-%d').tolist()
+        errors.append(f"[{context}] Duplicate dates: `{', '.join(dupes)}`.")
+
+    if errors:
+        raise DataFileValidationError(errors, file_name)
+    

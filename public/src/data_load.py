@@ -146,13 +146,15 @@ def load_asset_prices_from_file_sheet(file_name, sheet_name, needed_ids):
     
     #  We need to see what columns actually exist in the file first
     # This avoids a ValueError if one of your needed_ids isn't in the Excel sheet
-    preview = pd.read_excel(file_name, sheet_name=sheet_name, nrows=0)
+    try:
+        preview = pd.read_excel(file_name, sheet_name=sheet_name, nrows=0)
+    except ValueError:
+        raise dv.DataFileValidationError([f"Worksheet named **'{sheet_name}'** not found."], file_name)
 
     # Identify missing IDs
     missing_ids = [id for id in needed_ids if id not in preview.columns]
     if missing_ids:
-        raise KeyError(f"The following IDs were not found in {file_name} [{sheet_name}]: {missing_ids}")
-
+        raise dv.DataFileValidationError([f"The following IDs were not found in sheet **'{sheet_name}'**: `{', '.join(missing_ids)}`"], file_name)
     # Identify the first column (Date) and find which IDs exist in the sheet
     date_col = preview.columns[0]
     valid_cols = [date_col] + [id for id in needed_ids if id in preview.columns]
@@ -165,7 +167,8 @@ def load_asset_prices_from_file_sheet(file_name, sheet_name, needed_ids):
         parse_dates=[0], 
         usecols=valid_cols
     )
-    
+    dv.validate_asset_prices(assets_prices_df, file_name, sheet_name, needed_ids)
+
     return assets_prices_df
 
 # Loads prices for assets specified in the assets meta dataframe
