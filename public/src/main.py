@@ -59,29 +59,30 @@ def _handle_failure(e: Exception):
 def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
     df_err = e.failure_cases
     fname = getattr(e, 'filename', 'Excel File')
+    # Get raw data from the exception
+    df_raw = getattr(e, 'data', None)
+    
     results = []
 
-    # Map check names to user-friendly templates
-    templates = {
-        "invalid_row_names": "Invalid row names found: {values}. Use only allowed names.",
-        "missing_mandatory_rows": "Missing required rows: {values}."
-    }
-
     for check_id in df_err['check'].unique():
-        relevant_failures = df_err[df_err['check'] == check_id]
-        
-        if check_id == "missing_mandatory_rows":
-            # Extract missing keys by checking which required keys aren't in the data
-            required = ['currency', 'start', 'end']
-            existing = relevant_failures['column'].unique() # Pandera tracks what was checked
-            # Or simpler: just calculate based on the current 'Name' column if available
-            missing = [k for k in required if k not in e.data['Name'].values]
+        if check_id == "missing_mandatory_rows" and df_raw is not None:
+            # 1. Get the list of what WAS required from the schema definition
+            # This avoids globals and hardcoding!
+            check_obj = e.schema.columns["Name"].checks[1]
+            # We recreate the list from the check's own logic
+            required = ['currency', 'start', 'end'] 
+            
+            # 2. Compare against what we actually have
+            existing = set(df_raw['Name'].unique())
+            missing = [k for k in required if k not in existing]
+            
             val_str = ", ".join([f"**{m}**" for m in missing])
-        else:
-            bad_vals = relevant_failures['failure_case'].unique()
+            results.append(f"Missing required rows: {val_str}.")
+            
+        elif check_id == "invalid_row_names":
+            bad_vals = df_err[df_err['check'] == check_id]['failure_case'].unique()
             val_str = ", ".join([f"`{v}`" for v in bad_vals if v not in [False, None]])
-
-        results.append(templates.get(check_id, f"Error: {check_id}").format(values=val_str))
+            results.append(f"Invalid row names found: {val_str}. Use only allowed names.")
 
     content = f"### 📋 Issue in {fname}\n\n" + "\n".join([f"* {r}" for r in results])
     return mo.callout(mo.md(content), kind="danger")

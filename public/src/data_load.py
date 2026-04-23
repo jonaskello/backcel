@@ -7,16 +7,13 @@ SETTINGS_SCHEMA = pa.DataFrameSchema({
     "Name": pa.Column(
         str,
         checks=[
+            # This identifies rows that shouldn't be there
             pa.Check(lambda s: s.isin(['currency', 'start', 'end', 'portfolios', 'assets']) | s.str.startswith("_"), 
                      name="invalid_row_names"),
-            
-            pa.Check(
-                lambda s: all(k in s.values for k in ['currency', 'start', 'end']),
-                name="missing_mandatory_rows",
-                element_wise=False,
-                # Store the missing items in metadata during the check
-                metadata={"required": ['currency', 'start', 'end']}
-            )
+            # This identifies mandatory rows that ARE missing
+            pa.Check(lambda s: pd.Series(['currency', 'start', 'end']).isin(s),
+                     name="missing_mandatory_rows",
+                     element_wise=False)
         ]
     )
 })
