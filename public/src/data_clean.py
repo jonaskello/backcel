@@ -116,7 +116,12 @@ def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, as
             limiting_asset = valid_indices.idxmax()
             latest_idx = valid_indices.max()
             latest_date = pd.to_datetime(str(latest_idx)).date()
-            monitor.add(f"Limiting Asset: {limiting_asset} (starts {latest_date})")
+            try:
+                # Assumes limiting_asset (column name) exists as an index in assets_meta_df
+                asset_name = assets_meta_df.loc[limiting_asset, "name"]
+                monitor.add(f"Limiting Asset: {asset_name} ({limiting_asset}) starts {latest_date}")
+            except KeyError:
+                monitor.add(f"Limiting Asset: {limiting_asset} (starts {latest_date})")
 
     # Drop rows with any missing values
     asset_prices_adjusted = asset_prices.dropna()
