@@ -38,12 +38,8 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
     nr.show_results(backtest_result.unwrap())
 
 def _handle_failure(e: Exception):
-    # 1. Log the full traceback for the developer
-    logger.error("Operation failed", exc_info=e)
-
-    # 2. Dispatch the UI feedback based on error type
+    logger.error("ERROR", exc_info=e)
     if isinstance(e, dv.DataFileValidationError):
-        # Your custom formatter for Pandera
         content = format_validation_error(e)
         mo.stop(True, content)
         
