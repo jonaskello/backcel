@@ -135,16 +135,6 @@ def assets_meta(base_dir, files_df, base_currency):
     combined_df = pd.concat(all_meta)
     dv.validate_assets_meta(combined_df, "Asset Metadata Sheets")
 
-    if combined_df.index.duplicated().any():
-        total_dupes = combined_df.index[combined_df.index.duplicated()].unique().tolist()
-        print(f"❌ Error: Duplicate IDs found across different files/sheets: {total_dupes}")
-
-    if 'proxy' in combined_df.columns:
-        proxies_used = [p for p in combined_df['proxy'].unique() if pd.notna(p) and str(p).strip() != ""]
-        invalid_proxies = [p for p in proxies_used if p not in combined_df.index]
-        if invalid_proxies:
-            print(f"❌ Error: Proxies defined but not found in ID column: {invalid_proxies}")
-
     # Final filtering of columns
     existing_keep_cols = [c for c in cols_to_keep if c in combined_df.columns]
     combined_df = combined_df[existing_keep_cols]
