@@ -35,12 +35,12 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
                     await on_progress("Calculating results...")
                     nr.show_results(data)
                 case Err(e):
-                    logger.error(f"Error: {e}")
+                    logger.exception(e)
                     traceback.print_exception(e)
                     mo.stop(True, mo.callout(e, kind="danger"))
                     
         case Err(e):
-            logger.error(f"Error: {e}")
+            logger.exception(e)
             mo.stop(True, mo.callout(e, kind="danger"))
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
