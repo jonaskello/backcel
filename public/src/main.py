@@ -58,25 +58,34 @@ def _handle_failure(e: Exception):
 
 def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
     df = e.failure_cases
-    # Get unique failed checks
-    failed_checks = df['check'].unique()
-    
     msg_list = []
-    for check in failed_checks:
-        # Get the invalid values specifically for this check
-        bad_values = df[df['check'] == check]['failure_case'].unique()
-        msg_list.append(f"Check failed: **{check}** (Found: `{list(bad_values)}`)")
-    
-    content = "### 📋 Excel Validation Failed\n\n" + "\n".join([f"* {m}" for m in msg_list])
-    return mo.callout(content, kind="danger")
+
+    # Map our CUSTOM NAMES to friendly messages
+    friendly_messages = {
+        "invalid_row_names": "Invalid row names found: {values}. Use only currency, start, end, portfolios, or assets.",
+        "missing_mandatory_rows": "Missing required settings. Ensure **currency**, **start**, and **end** rows exist.",
+        "empty_cells": "Empty values found. Please fill in all cells in the 'Value' column.",
+        "is_unique": "Duplicate names found: {values}. Certain keys should only appear once."
+    }
+
+    # Group failures by the check name
+    for check_id in df['check'].unique():
+        # Get specific failure cases for this named check
+        bad_values = df[df['check'] == check_id]['failure_case'].unique()
+        val_str = ", ".join([f"`{v}`" for v in bad_values if v is not False and v is not None])
+        
+        # Get the template
+        template = friendly_messages.get(check_id, f"Validation error ({check_id}): {val_str}")
+        msg_list.append(template.format(values=val_str))
+
+    content = "### 📋 Excel Configuration Error\n" + "\n".join([f"* {m}" for m in msg_list])
+    return mo.callout(mo.md(content), kind="danger")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 
     try:
-
-        await on_progress("Loading the data")
-
         # LOAD DATA
+        await on_progress("Loading the data")
 
         # SETTINGS
         start_date, end_date, base_currency, portfolio_files_df, asset_files_df = dl.load_settings(base_dir, settings_file)

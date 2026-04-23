@@ -3,20 +3,27 @@ import logging
 import pandas as pd
 import pandera as pa
 
+import pandera as pa
+
 SETTINGS_SCHEMA = pa.DataFrameSchema({
     "Name": pa.Column(
         str, 
         checks=[
-            # Ensure only allowed keys exist
-            pa.Check.isin(['currency', 'start', 'end', 'portfolios', 'assets']),
-            # Custom check: Ensure the mandatory singleton keys exist
-            pa.Check(lambda s: all(k in s.values for k in ['currency', 'start', 'end']), 
-                     name="check_mandatory_keys")
+            pa.Check.isin(
+                ['currency', 'start', 'end', 'portfolios', 'assets'], 
+                name="invalid_row_names"
+            ),
+            pa.Check(
+                lambda s: all(k in s.values for k in ['currency', 'start', 'end']), 
+                name="missing_mandatory_rows"
+            )
         ],
-        # unique=True removed to allow multiple 'assets'/'portfolios'
-        unique=False 
+        nullable=False # This replaces the broken Check.not_null()
     ),
-    "Value": pa.Column(object)
+    "Value": pa.Column(
+        object, 
+        nullable=False # Ensures the 'Value' column isn't empty
+    )
 })
 
 def parse_excel_path(path_str, default_file):
