@@ -107,18 +107,18 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
 
 def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, start_date: date) -> pd.DataFrame:
     # Identify assets with ANY missing prices in this range
-    missing_data = asset_prices.isnull().sum()
-    assets_with_nans = missing_data[missing_data > 0]
+    first_indices = asset_prices.apply(lambda col: col.first_valid_index())
+    valid_indices = first_indices.dropna()
     
     # Log limiting asset
-    if not assets_with_nans.empty:
-        monitor.add(f"\nWARNING: Portfolio Assets with Missing Data after {start_date:%Y-%m-%d}")
-        first_indices = asset_prices.apply(lambda col: col.first_valid_index())
-        valid_indices = first_indices.dropna()
-        if not valid_indices.empty:
-            limiting_asset = valid_indices.idxmax()
-            latest_idx = valid_indices.max()
-            latest_date = pd.to_datetime(str(latest_idx)).date()
+    if not valid_indices.empty:
+        limiting_asset = valid_indices.idxmax()
+        latest_idx = valid_indices.max()
+        latest_date = pd.to_datetime(str(latest_idx)).date()
+
+        # Added .any() or ensure scalar comparison to satisfy the type checker
+        if (pd.to_datetime(str(latest_idx)) > pd.Timestamp(start_date)):
+            monitor.add(f"\nWARNING: Portfolio Assets with Missing Data after {start_date:%Y-%m-%d}")
             try:
                 # Assumes limiting_asset (column name) exists as an index in assets_meta_df
                 asset_name = assets_meta_df.loc[limiting_asset, "name"]
