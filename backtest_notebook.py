@@ -113,7 +113,7 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_name):
     from public.src import report as nr
     from public.src.result import Ok, Err
 
-    if run_btn.value:
+    if run_btn.value or not is_wasm:
         if is_wasm:
             fm.sync_filesystem()
 
