@@ -110,7 +110,7 @@ def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.Dat
     assets_with_nans = missing_data[missing_data > 0]
     
     if not assets_with_nans.empty:
-        monitor.add(f"\n--- WARNING: Portfolio Assets with Missing Data after {start_date} ---")
+        monitor.add(f"\nWARNING: Portfolio Assets with Missing Data after {start_date}")
 
         # Find which asset is limiting (has the latest start date)
         start_points = [(df[a].first_valid_index(), a) for a in df.columns]
@@ -126,7 +126,7 @@ def adjust_start_to_available_data(df: pd.DataFrame, start_date: date) -> pd.Dat
     # Check if we have data left and print the actual start date
     if not final_df.empty:
         actual_start = pd.to_datetime(str(final_df.index[0])).date()
-        monitor.add(f"--- INFO: Backtest will start on: {actual_start} ---")
+        monitor.add(f"INFO: Backtest will start on: {actual_start}")
     else:
         raise ValueError(f"No overlapping data found for these assets after {start_date}")
 
