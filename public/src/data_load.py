@@ -89,7 +89,7 @@ def load_portfolios(files_df, base_dir):
 # Skips rows that do not have an ID so they can be used for headings etc.
 def assets_meta(base_dir, files_df, base_currency):
     default_prices_sheet_name = "Prices"
-    all_meta = []
+    all_meta = {}
     required_cols = [ 'name' ]
     optional_cols = [ 'currency', 'proxy', 'stddev']
     generated_cols = [ 'file', 'sheet']
@@ -127,13 +127,13 @@ def assets_meta(base_dir, files_df, base_currency):
         if missing:
             print(f"⚠️ Warning: {file_path} [{sheet_name}] is missing columns: {missing}")
 
-        all_meta.append(meta_df)
+        all_meta[row.file] = meta_df
     
     if not all_meta:
         return pd.DataFrame()
 
-    combined_df = pd.concat(all_meta)
-    dv.validate_assets_meta(combined_df, "Asset Metadata Sheets")
+    dv.validate_assets_meta(all_meta)
+    combined_df = pd.concat(all_meta.values())
 
     # Final filtering of columns
     existing_keep_cols = [c for c in cols_to_keep if c in combined_df.columns]

@@ -41,36 +41,47 @@ def validate_settings(df: pd.DataFrame, filename: str):
     if errors:
         raise DataFileValidationError(errors, filename)
 
-def validate_assets_meta(df: pd.DataFrame, filename: str):
+def validate_assets_meta(meta_map: dict[str, pd.DataFrame]):
     errors = []
+    required = {'name'}
     
-    # 1. Check Index (ID)
-    if df.index.name != "ID":
-        errors.append("Missing index column **'ID'**.")
+    # 1. Local Validation (Per File)
+    for fname, df in meta_map.items():
+        # Check Columns
+        missing = required - set(df.columns)
+        if missing:
+            errors.append(f"[{fname}] Missing columns: `{', '.join(missing)}`.")
+        
+        # Check for local duplicates within the same file
+        if df.index.duplicated().any():
+            dupes = df.index[df.index.duplicated()].unique().tolist()
+            errors.append(f"[{fname}] Internal duplicate IDs: `{', '.join(map(str, dupes))}`.")
+
+    # 2. Global Validation (Across all files)
+    all_ids = []
+    for fname, df in meta_map.items():
+        all_ids.extend([(idx, fname) for idx in df.index])
     
-    # Check for empty IDs (though they should be filtered before calling this)
-    if any(df.index.isna()):
-        errors.append("Found rows with **empty IDs**.")
+    # Convert to a temp DF for easy grouping of global duplicates
+    global_id_df = pd.DataFrame(all_ids, columns=['ID', 'Source'])
+    dupes_mask = global_id_df['ID'].duplicated(keep=False)
+    
+    if dupes_mask.any():
+        for name, group in global_id_df[dupes_mask].groupby('ID'):
+            sources = group['Source'].unique()
+            if len(sources) > 1:
+                errors.append(f"Global duplicate ID **{name}** found across: `{', '.join(sources)}`.")
 
-    # 2. Check Required Columns (Case-insensitive check)
-    required = {'name'} # Based on your code's required_cols
-    existing_cols = set(df.columns)
-    if missing := (required - existing_cols):
-        errors.append(f"Missing required columns: **{', '.join(sorted(missing))}**")
-
-    # 3. Global ID Uniqueness
-    if df.index.duplicated().any():
-        dupes = df.index[df.index.duplicated()].unique().tolist()
-        errors.append(f"Duplicate IDs found: `{', '.join(map(str, dupes))}`")
-
-    # 4. Proxy Integrity
-    if 'proxy' in df.columns:
-        # Get unique proxies that aren't empty/null
-        proxies_used = {p for p in df['proxy'].dropna().unique() if str(p).strip() != ""}
-        # Compare against the ID index
-        invalid_proxies = proxies_used - set(df.index)
-        if invalid_proxies:
-            errors.append(f"Proxies defined but not found in ID column: `{', '.join(map(str, invalid_proxies))}`")
+    # 3. Proxy Validation (Cross-reference)
+    # Flatten all IDs into a set for fast lookup
+    valid_ids = {item[0] for item in all_ids}
+    for fname, df in meta_map.items():
+        if 'proxy' in df.columns:
+            # Check only non-empty proxy cells
+            proxies = df['proxy'].replace("", pd.NA).dropna()
+            for asset_id, p in proxies.items():
+                if p not in valid_ids:
+                    errors.append(f"[{fname}] Asset **{asset_id}** uses non-existent proxy **{p}**.")
 
     if errors:
-        raise DataFileValidationError(errors, filename)
+        raise DataFileValidationError(errors, "Asset Files")
