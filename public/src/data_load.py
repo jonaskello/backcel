@@ -53,16 +53,12 @@ def load_settings(base_dir: str, settings_file: str):
 # which can be used to add meta columns like _Name for the asssets
 # or disable a portfolio like _Portfolio3
 def load_portfolios(files_df, base_dir):
-    all_portfolios = []
-
-
+    all_portfolios = {}
     for row in files_df.itertuples():
         file_name = os.path.join(base_dir, row.file)
-        sheet_name = row.sheet
-
         if not os.path.exists(file_name):
             raise FileNotFoundError(f"Data file not found: {file_name}")
-        df = pd.read_excel(file_name, sheet_name, index_col=0)
+        df = pd.read_excel(file_name, row.sheet, index_col=0)
         
         # Drop columns that start with an underscore
         cols_to_drop = [c for c in df.columns if c.startswith('_')]
@@ -76,10 +72,13 @@ def load_portfolios(files_df, base_dir):
             print("\n--- WARNING: Portfolio index (ID) contains NaN values! ---")
             print(df[df.index.isna()])
 
-        all_portfolios.append(df)
+        context = f"{row.file}!{row.sheet}"
+        all_portfolios[context] = df
+
+    dv.validate_portfolios(all_portfolios)
 
     # Combine by merging columns on matching index (ID)
-    combined_df = pd.concat(all_portfolios, axis=1)
+    combined_df = pd.concat(all_portfolios.values(), axis=1)
 
     return combined_df
 
