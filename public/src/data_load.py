@@ -28,9 +28,18 @@ def parse_excel_path(path_str, default_file):
     # If no '!', assume it's a sheet in the main settings file
     return {"file": default_file, "sheet": path_str}
 
-def load_settings(base_dir, settings_file):
+def load_settings(base_dir: str, settings_file: str):
     settings_path = os.path.join(base_dir, settings_file)
+    # settings_df = pd.read_excel(settings_path, sheet_name='Main')
+
+
+    # try:
     settings_df = pd.read_excel(settings_path, sheet_name='Main')
+    SETTINGS_SCHEMA.validate(settings_df, lazy=True)
+    # except pa.errors.SchemaErrors as e:
+    #     return Err(f"Settings Error: {e}")
+    # except Exception as e:
+    #     return Err(f"File Error: {e}")
 
     # Get settings for currency and dates
     base_currency = settings_df.loc[settings_df['Name'] == 'currency', 'Value'].iloc[0]

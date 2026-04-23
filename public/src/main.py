@@ -2,6 +2,7 @@ import os
 import traceback
 import marimo as mo
 import pandas as pd
+import pandera as pa
 from public.src import data_clean as dc
 from public.src import data_load as dl
 from public.src.result import Result, Ok, Err
@@ -37,9 +38,42 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
     await on_progress("Calculating results...")
     nr.show_results(backtest_result.unwrap())
 
+# def _handle_failure(e: Exception):
+#     logger.error("Backtest failed", exc_info=e)
+#     mo.stop(True, mo.callout(str(e), kind="danger"))
+
+
 def _handle_failure(e: Exception):
-    logger.error("Backtest failed", exc_info=e)
-    mo.stop(True, mo.callout(str(e), kind="danger"))
+    # 1. Log the full traceback for the developer
+    logger.error("Operation failed", exc_info=e)
+
+    # 2. Dispatch the UI feedback based on error type
+    if isinstance(e, pa.errors.SchemaErrors):
+        # Your custom formatter for Pandera
+        content = format_pandera_error(e)
+        mo.stop(True, content)
+        
+    elif isinstance(e, FileNotFoundError):
+        mo.stop(True, mo.callout(f"File not found: {e.filename}", kind="danger"))
+        
+    else:
+        # Fallback for generic errors
+        mo.stop(True, mo.callout(str(e), kind="danger"))
+
+
+def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
+    df = e.failure_cases
+    # Get unique failed checks
+    failed_checks = df['check'].unique()
+    
+    msg_list = []
+    for check in failed_checks:
+        # Get the invalid values specifically for this check
+        bad_values = df[df['check'] == check]['failure_case'].unique()
+        msg_list.append(f"Check failed: **{check}** (Found: `{list(bad_values)}`)")
+    
+    content = "### 📋 Excel Validation Failed\n\n" + "\n".join([f"* {m}" for m in msg_list])
+    return mo.callout(content, kind="danger")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 
