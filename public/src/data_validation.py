@@ -146,9 +146,14 @@ def validate_portfolios(portfolios_map: dict[str, pd.DataFrame]):
 
             # 3. Sum to 1.0/100% Check
             col_sum = numeric_weights.sum()
-            if not (0.99 <= col_sum <= 1.01 or 99 <= col_sum <= 101):
-                errors.append(f"[{context}] Portfolio **'{col}'** weights sum to {col_sum}, not 1.0 or 100%.")
-            
+            # Use a very small epsilon (0.01%) for float rounding errors
+            is_near_1 = abs(col_sum - 1.0) < 0.0001
+            is_near_100 = abs(col_sum - 100.0) < 0.01
+            if not (is_near_1 or is_near_100):
+                # Format to 2 decimal places to show the user the discrepancy
+                actual_sum = f"{col_sum:.2%}" if col_sum <= 2 else f"{col_sum:.2f}%"
+                errors.append(f"[{context}] Portfolio **'{col}'** weights sum to {actual_sum}, not 1.0 or 100%.")
+                        
             all_portfolio_names.append((col, context))
 
     # 4. Global Duplicate Check
