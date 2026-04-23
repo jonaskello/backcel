@@ -117,7 +117,6 @@ async def _(asyncio, base_dir, dlm, fm, run_btn, settings_file_path):
 
         with mo.status.spinner(title="Running...") as _spinner:
             async def on_progress(msg):
-                # print(msg)
                 _spinner.update(msg)
                 await asyncio.sleep(0.1)
 

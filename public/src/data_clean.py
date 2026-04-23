@@ -86,7 +86,7 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                             # If asset is entirely empty, use proxy data as is
                             filled_prices[asset_id] = proxy_series
                             new_first = filled_prices[asset_id].first_valid_index()
-                            print(f"Filled empty asset {asset_id} using {proxy_id} | Starts at {new_first.date()}")
+                            logger.info(f"Filled empty asset {asset_id} using {proxy_id} | Starts at {new_first.date()}")
                             changes_made = True
                         else:
                             # Calculate scaling ratio at the target's earliest available price
