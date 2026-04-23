@@ -16,12 +16,15 @@ async with app.setup:
     import marimo as mo
     import pandas as pd
     import sys
+    import logging
 
     is_wasm = "pyodide" in sys.modules
     if is_wasm:
         # Install our own code as a package so it can be used in the browser
         import micropip
         await micropip.install(str(mo.notebook_location().joinpath("public", "dist", "portfolio_logic-0.1.0-py3-none-any.whl")))
+
+    logging.basicConfig(level=logging.WARNING, format='%(name)s - %(levelname)s: %(message)s')
 
 
 @app.cell(hide_code=True)

@@ -1,6 +1,9 @@
 import pandas as pd
 from datetime import date
 from public.src.monitor import monitor
+import logging
+
+logger = logging.getLogger(__name__)
 
 def resolve_asset_dependencies(initial_tickers, assets_meta_df, base_currency):
     all_valid_ids = set(assets_meta_df.index)
@@ -97,7 +100,7 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                                 # Fill the target's leading NaNs with the scaled proxy values
                                 filled_prices[asset_id] = target_series.combine_first(scaled_proxy)
                                 new_first = filled_prices[asset_id].first_valid_index()
-                                print(f"Backfilled {asset_id} using {proxy_id} (Ratio: {ratio:.4f}) | {new_first.date()} to {target_first.date()}")
+                                logger.info(f"Backfilled {asset_id} using {proxy_id} (Ratio: {ratio:.4f}) | {new_first.date()} to {target_first.date()}")
                                 changes_made = True
                             
     return filled_prices
