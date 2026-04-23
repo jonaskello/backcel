@@ -38,7 +38,7 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
     nr.show_results(backtest_result.unwrap())
 
 def _handle_failure(e: Exception):
-    logger.exception(e)
+    logger.error("Backtest failed", exc_info=e)
     mo.stop(True, mo.callout(str(e), kind="danger"))
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:

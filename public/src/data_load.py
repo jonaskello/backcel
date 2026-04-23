@@ -6,10 +6,6 @@ import os
 import pandas as pd
 
 def parse_excel_path(path_str, default_file):
-    """
-    Parses 'file.xlsx!Sheet' or just 'Sheet'.
-    Returns a dictionary for easy DataFrame construction.
-    """
     path_str = str(path_str).strip()
     if "!" in path_str:
         file, sheet = path_str.split("!", 1)
@@ -27,15 +23,13 @@ def load_settings(base_dir, settings_file):
     start_date = pd.to_datetime(settings_df.loc[settings_df['Name'] == 'start', 'Value'].iloc[0])
     end_date = pd.to_datetime(settings_df.loc[settings_df['Name'] == 'end', 'Value'].iloc[0])
 
-    # 1. Parse Portfolio Sources
-    # Supports "Allocations" or "external.xlsx!Allocations"
+    # Parse Portfolio Sources
     portfolio_raw = settings_df[settings_df['Name'] == 'portfolios']['Value'].tolist()
     portfolio_files_df = pd.DataFrame([
         parse_excel_path(p, settings_file) for p in portfolio_raw
     ])
 
-    # 2. Parse Asset Sources 
-    # Supports "Assets" or "market_data.xlsx!Main"
+    #  Parse Asset Sources 
     asset_raw = settings_df[settings_df['Name'] == 'assets']['Value'].tolist()
     asset_files_df = pd.DataFrame([
         parse_excel_path(a, settings_file) for a in asset_raw
