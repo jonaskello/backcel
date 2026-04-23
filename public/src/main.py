@@ -25,20 +25,23 @@ def get_local_base_dir() -> str:
     return os.environ.get("DATA_PATH", "public/example")
 
 async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
-    monitor.clear()
-    await on_progress("Loading assets...")
-    data_load_result = await data_load_all(base_dir, on_progress, settings_file_path)
-    if isinstance(data_load_result, Err):
-        return _handle_failure(data_load_result.error)
+    try:
+        monitor.clear()
+        await on_progress("Loading assets...")
+        data_load_result = await data_load_all(base_dir, on_progress, settings_file_path)
+        if isinstance(data_load_result, Err):
+            return _handle_failure(data_load_result.error)
 
-    portfolio_df, asset_prices_available, assets_meta_df = data_load_result.unwrap()
-    await on_progress("Running backtest...")
-    backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
-    if isinstance(backtest_result, Err):
-        return _handle_failure(backtest_result.error)
+        portfolio_df, asset_prices_available, assets_meta_df = data_load_result.unwrap()
+        await on_progress("Running backtest...")
+        backtest_result = bn.run_backtest_all(assets_meta_df, asset_prices_available, portfolio_df)
+        if isinstance(backtest_result, Err):
+            return _handle_failure(backtest_result.error)
 
-    await on_progress("Calculating results...")
-    nr.show_results(backtest_result.unwrap())
+        await on_progress("Calculating results...")
+        nr.show_results(backtest_result.unwrap())
+    except Exception as e:
+        _handle_failure(e)
 
 def build_error_callout(header: str, body: str):
     return mo.callout(mo.md(f"{header}\n\n{body}"), kind="danger")
@@ -50,12 +53,12 @@ def _handle_failure(e: Exception):
         body = "\n".join([f"* {err}" for err in e.errors])
         mo.stop(True, build_error_callout(header, body))
     elif isinstance(e, FileNotFoundError):
-        header = "### File missing"
+        header = "### 📂❓File missing"
         body = str(e)
         mo.stop(True, build_error_callout(header, body))
     else:
         # Fallback for generic errors
-        header = "### 📋 Exception occured"
+        header = "### ⚠️ Exception occured"
         mo.stop(True, build_error_callout(header, str(e)))
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
