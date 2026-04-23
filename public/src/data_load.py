@@ -20,7 +20,6 @@ def parse_excel_path(path_str, default_file):
 
 def load_settings(base_dir: str, settings_file: str, sheet_name: str):
     settings_path = os.path.join(base_dir, settings_file)
-    # settings_df = pd.read_excel(settings_path, sheet_name=sheet_name)
     settings_df = read_excel_with_workarounds(settings_path, sheet_name=sheet_name)
     # Filter out any rows where the Name starts with "_"
     if "Name" in settings_df.columns:
@@ -62,7 +61,6 @@ def load_portfolios(files_df, base_dir):
         file_name = os.path.join(base_dir, row.file)
         if not os.path.exists(file_name):
             raise FileNotFoundError(row.file)
-        # df = pd.read_excel(file_name, row.sheet, index_col=0)
         df = read_excel_with_workarounds(file_name, row.sheet, index_col=0)
         
         # Drop columns that start with an underscore
@@ -103,7 +101,6 @@ def assets_meta(base_dir, files_df, base_currency):
         if not os.path.exists(file_path):
             raise FileNotFoundError(row.file)
             
-        # meta_df = pd.read_excel(file_path, sheet_name=row.sheet)
         meta_df = read_excel_with_workarounds(file_path, sheet_name=row.sheet)
         meta_df.columns = meta_df.columns.str.lower()
         if 'id' in meta_df.columns:
@@ -156,7 +153,6 @@ def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_id
     #  We need to see what columns actually exist in the file first
     # This avoids a ValueError if one of your needed_ids isn't in the Excel sheet
     try:
-        # preview = pd.read_excel(file_path, sheet_name=sheet_name, nrows=0)
         preview = read_excel_with_workarounds(file_path, sheet_name=sheet_name, nrows=0)
     except ValueError:
         raise dv.DataFileValidationError([f"Worksheet named **'{sheet_name}'** not found."], file_path)
@@ -249,17 +245,7 @@ def normalized_asset_prices(assets_meta_df, fx_data, assets_prices_df, base_curr
 
     return assets_normalized
 
-
-    # assets_prices_df = read_excel_with_workarounds(
-    #     file_path, 
-    #     sheet_name=sheet_name, 
-    #     index_col=0, 
-    #     parse_dates=[0], 
-    #     usecols=valid_cols
-    # )
-
-
-def read_excel_with_workarounds(file_path: str, sheet_name: str, index_col: int | str | None = None, nrows: int | None = None, usecols = None, parse_dates = None) -> pd.DataFrame:
+def read_excel_with_workarounds(file_path: str, sheet_name: str, index_col: int | str | None = None, nrows: int | None = None, usecols = None, parse_dates: Any = None) -> pd.DataFrame:
     try:
         # First attempt: Read directly
         df = pd.read_excel(file_path, sheet_name=sheet_name, index_col=index_col, nrows=nrows, usecols=usecols, parse_dates=parse_dates)
