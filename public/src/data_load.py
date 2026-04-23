@@ -90,19 +90,18 @@ def load_portfolios(files_df, base_dir):
 def assets_meta(base_dir, files_df, base_currency):
     default_prices_sheet_name = "Prices"
     all_meta = {}
-    required_cols = [ 'name' ]
-    optional_cols = [ 'currency', 'proxy', 'stddev']
-    generated_cols = [ 'file', 'sheet']
-    cols_to_keep = required_cols + optional_cols + generated_cols
 
     for row in files_df.itertuples():
         file_path = os.path.join(base_dir, row.file)
-        # sheet_name = row.sheet
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Data file not found: {file_path}")
             
-        meta_df = pd.read_excel(file_path, sheet_name=row.sheet, index_col="ID")
+        meta_df = pd.read_excel(file_path, sheet_name=row.sheet)
         meta_df.columns = meta_df.columns.str.lower()
+        if 'id' in meta_df.columns:
+            meta_df = meta_df.set_index('id')
+        else:
+            raise dv.DataFileValidationError([f"Missing required column: **'ID'**"], row.file + "!" + row.sheet)
         meta_df = meta_df[meta_df.index.notna()]
 
         # Split "prices" column to file and sheet
@@ -123,10 +122,6 @@ def assets_meta(base_dir, files_df, base_currency):
         meta_df['stddev'] = meta_df['stddev'] if 'stddev' in meta_df.columns else 0.1
         meta_df['stddev'] = meta_df['stddev'].fillna(0.1)
         
-        missing = [c for c in required_cols if c not in meta_df.columns]
-        if missing:
-            print(f"⚠️ Warning: {file_path} [{row.sheet}] is missing columns: {missing}")
-
         all_meta[row.file + "!" + row.sheet] = meta_df
     
     if not all_meta:
@@ -136,6 +131,10 @@ def assets_meta(base_dir, files_df, base_currency):
     combined_df = pd.concat(all_meta.values())
 
     # Final filtering of columns
+    required_cols = [ 'name' ]
+    optional_cols = [ 'currency', 'proxy', 'stddev']
+    generated_cols = [ 'file', 'sheet']
+    cols_to_keep = required_cols + optional_cols + generated_cols
     existing_keep_cols = [c for c in cols_to_keep if c in combined_df.columns]
     combined_df = combined_df[existing_keep_cols]
 
