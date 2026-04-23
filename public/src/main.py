@@ -74,7 +74,8 @@ def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
         msg = msgs.get(name, f"Error: {name}")
         results.append(msg.format(vals))
 
-    return mo.callout(mo.md("\n".join([f"* {r}" for r in results])), kind="danger")
+    content = "### 📋 Excel File Issue\n\n" + "\n".join([f"* {m}" for m in results])
+    return mo.callout(mo.md(content), kind="danger")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 
