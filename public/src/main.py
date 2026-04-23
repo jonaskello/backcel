@@ -8,6 +8,9 @@ from public.src.result import Result, Ok, Err
 from public.src import backtest as bn
 from public.src import report as nr
 from public.src.monitor import monitor
+import logging
+
+logger = logging.getLogger(__name__)
 
 def display(obj):
     mo.output.append(obj)
@@ -32,12 +35,13 @@ async def run_full_backtest(base_dir: str, on_progress, settings_file_path):
                     await on_progress("Calculating results...")
                     nr.show_results(data)
                 case Err(e):
-                    print(f"Error: {e}")
+                    logger.error(f"Error: {e}")
                     traceback.print_exception(e)
-                    mo.stop(True, f"ERROR: {e}")
+                    mo.stop(True, mo.callout(e, kind="danger"))
+                    
         case Err(e):
-            print(f"Error: {e}")
-            mo.stop(True, f"ERROR: {e}")
+            logger.error(f"Error: {e}")
+            mo.stop(True, mo.callout(e, kind="danger"))
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 
