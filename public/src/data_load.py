@@ -124,7 +124,7 @@ def assets_meta(base_dir, files_df, base_currency):
         meta_df['stddev'] = meta_df['stddev'] if 'stddev' in meta_df.columns else 0.1
         meta_df['stddev'] = meta_df['stddev'].fillna(0.1)
         
-        all_meta[row.file + "!" + row.sheet] = meta_df
+        all_meta[str(row.file) + "!" + row.sheet] = meta_df
     
     if not all_meta:
         return pd.DataFrame()
