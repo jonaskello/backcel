@@ -1,4 +1,7 @@
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DataFileValidationError(Exception):
     def __init__(self, errors: list[str], filename: str):
@@ -107,5 +110,6 @@ def validate_asset_prices(df: pd.DataFrame, file_name: str, sheet_name: str, nee
         errors.append(f"[Duplicate dates: `{', '.join(dupes)}`.")
 
     if errors:
+        logger.warning("context "+context)
         raise DataFileValidationError(errors, context)
     

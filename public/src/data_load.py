@@ -2,6 +2,9 @@ import os
 import logging
 import pandas as pd
 from public.src import data_validation as dv
+import logging
+
+logger = logging.getLogger(__name__)
 
 def parse_excel_path(path_str, default_file):
     path_str = str(path_str).strip()
@@ -155,7 +158,7 @@ def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_id
     # Identify missing IDs
     missing_ids = [id for id in needed_ids if id not in preview.columns]
     if missing_ids:
-        raise dv.DataFileValidationError([f"The following IDs were not found in sheet **'{sheet_name}'**: `{', '.join(missing_ids)}`"], file_path)
+        raise dv.DataFileValidationError([f"The following IDs were not found: `{', '.join(missing_ids)}`"], file_name + "!" + sheet_name)
     # Identify the first column (Date) and find which IDs exist in the sheet
     date_col = preview.columns[0]
     valid_cols = [date_col] + [id for id in needed_ids if id in preview.columns]
