@@ -1,15 +1,14 @@
+import logging
 import os
-import traceback
 import marimo as mo
 import pandas as pd
-import pandera.pandas as pa
 from public.src import data_clean as dc
 from public.src import data_load as dl
 from public.src.result import Result, Ok, Err
 from public.src import backtest as bn
 from public.src import report as nr
 from public.src.monitor import monitor
-import logging
+from public.src import data_validation as dv
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +42,9 @@ def _handle_failure(e: Exception):
     logger.error("Operation failed", exc_info=e)
 
     # 2. Dispatch the UI feedback based on error type
-    if isinstance(e, pa.errors.SchemaErrors):
+    if isinstance(e, dv.DataFileValidationError):
         # Your custom formatter for Pandera
-        content = format_pandera_error(e)
+        content = format_validation_error(e)
         mo.stop(True, content)
         
     elif isinstance(e, FileNotFoundError):
@@ -56,36 +55,10 @@ def _handle_failure(e: Exception):
         mo.stop(True, mo.callout(str(e), kind="danger"))
 
 
-def format_pandera_error(e: pa.errors.SchemaErrors) -> mo.Html:
-    df_err = e.failure_cases
-    fname = getattr(e, 'filename', 'Excel File')
-    # Get raw data from the exception
-    df_raw = getattr(e, 'data', None)
-    
-    results = []
-
-    for check_id in df_err['check'].unique():
-        if check_id == "missing_mandatory_rows" and df_raw is not None:
-            # 1. Get the list of what WAS required from the schema definition
-            # This avoids globals and hardcoding!
-            check_obj = e.schema.columns["Name"].checks[1]
-            # We recreate the list from the check's own logic
-            required = ['currency', 'start', 'end'] 
-            
-            # 2. Compare against what we actually have
-            existing = set(df_raw['Name'].unique())
-            missing = [k for k in required if k not in existing]
-            
-            val_str = ", ".join([f"**{m}**" for m in missing])
-            results.append(f"Missing required rows: {val_str}.")
-            
-        elif check_id == "invalid_row_names":
-            bad_vals = df_err[df_err['check'] == check_id]['failure_case'].unique()
-            val_str = ", ".join([f"`{v}`" for v in bad_vals if v not in [False, None]])
-            results.append(f"Invalid row names found: {val_str}. Use only allowed names.")
-
-    content = f"### 📋 Issue in {fname}\n\n" + "\n".join([f"* {r}" for r in results])
-    return mo.callout(mo.md(content), kind="danger")
+def format_validation_error(e: dv.DataFileValidationError) -> mo.Html:
+    header = f"### 📋 Issue in {e.filename}"
+    body = "\n".join([f"* {err}" for err in e.errors])
+    return mo.callout(mo.md(f"{header}\n\n{body}"), kind="danger")
 
 async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], Exception]:
 

@@ -1,22 +1,7 @@
 import os
 import logging
 import pandas as pd
-import pandera.pandas as pa
-
-SETTINGS_SCHEMA = pa.DataFrameSchema({
-    "Name": pa.Column(
-        str,
-        checks=[
-            # This identifies rows that shouldn't be there
-            pa.Check(lambda s: s.isin(['currency', 'start', 'end', 'portfolios', 'assets']) | s.str.startswith("_"), 
-                     name="invalid_row_names"),
-            # This identifies mandatory rows that ARE missing
-            pa.Check(lambda s: pd.Series(['currency', 'start', 'end']).isin(s),
-                     name="missing_mandatory_rows",
-                     element_wise=False)
-        ]
-    )
-})
+from public.src import data_validation as dv
 
 def parse_excel_path(path_str, default_file):
     path_str = str(path_str).strip()
@@ -34,11 +19,7 @@ def load_settings(base_dir: str, settings_file: str):
     if "Name" in settings_df.columns:
         settings_df = settings_df[~settings_df['Name'].str.startswith('_', na=False)]
     # Validate the file
-    try:
-        settings_df = SETTINGS_SCHEMA.validate(settings_df, lazy=True)
-    except pa.errors.SchemaErrors as e:
-        e.filename = settings_file 
-        raise e
+    dv.validate_settings(settings_df, settings_file)
 
     # Get settings for currency and dates
     base_currency = settings_df.loc[settings_df['Name'] == 'currency', 'Value'].iloc[0]
@@ -58,6 +39,8 @@ def load_settings(base_dir: str, settings_file: str):
     ])
 
     return start_date, end_date, base_currency, portfolio_files_df, asset_files_df
+
+
 
 # Load portfolio names and weights
 # The file should have columns ID, Portfolio1, Portfolio2...
