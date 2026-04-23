@@ -140,28 +140,29 @@ def assets_meta(base_dir, files_df, base_currency):
 
     return combined_df
 
-def load_asset_prices_from_file_sheet(file_name, sheet_name, needed_ids):
-    if not os.path.exists(file_name):
-        raise FileNotFoundError(f"Data file not found: {file_name}")
+def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_ids):
+    file_path = os.path.join(base_dir, file_name)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Data file not found: {file_path}")
     
     #  We need to see what columns actually exist in the file first
     # This avoids a ValueError if one of your needed_ids isn't in the Excel sheet
     try:
-        preview = pd.read_excel(file_name, sheet_name=sheet_name, nrows=0)
+        preview = pd.read_excel(file_path, sheet_name=sheet_name, nrows=0)
     except ValueError:
-        raise dv.DataFileValidationError([f"Worksheet named **'{sheet_name}'** not found."], file_name)
+        raise dv.DataFileValidationError([f"Worksheet named **'{sheet_name}'** not found."], file_path)
 
     # Identify missing IDs
     missing_ids = [id for id in needed_ids if id not in preview.columns]
     if missing_ids:
-        raise dv.DataFileValidationError([f"The following IDs were not found in sheet **'{sheet_name}'**: `{', '.join(missing_ids)}`"], file_name)
+        raise dv.DataFileValidationError([f"The following IDs were not found in sheet **'{sheet_name}'**: `{', '.join(missing_ids)}`"], file_path)
     # Identify the first column (Date) and find which IDs exist in the sheet
     date_col = preview.columns[0]
     valid_cols = [date_col] + [id for id in needed_ids if id in preview.columns]
 
     # Load only the necessary columns
     assets_prices_df = pd.read_excel(
-        file_name, 
+        file_path, 
         sheet_name=sheet_name, 
         index_col=0, 
         parse_dates=[0], 
@@ -182,12 +183,11 @@ async def load_asset_prices(base_dir: str, assets_meta_df, on_progress):
     all_price_dfs = []
 
     for (file_name, sheet), group in grouped:
-        file = os.path.join(base_dir, file_name)
         id_list = group.index.tolist()
         # print(f"Loading {len(id_list)} assets from {file_name} [{sheet}]")
         
         # Load prices using your second function
-        df = load_asset_prices_from_file_sheet(file, sheet, id_list)
+        df = load_asset_prices_from_file_sheet(base_dir, file_name, sheet, id_list)
         await on_progress(f"LOADED {len(df.index)} rows from {file_name} [{sheet}]")
         all_price_dfs.append(df)
 
