@@ -118,7 +118,7 @@ def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, as
 
         # Added .any() or ensure scalar comparison to satisfy the type checker
         if (pd.to_datetime(str(latest_idx)) > pd.Timestamp(start_date)):
-            monitor.add(f"\nWARNING: Portfolio Assets with Missing Data after {start_date:%Y-%m-%d}")
+            monitor.add(f"WARNING: Portfolio Assets with Missing Data after {start_date:%Y-%m-%d}")
             try:
                 # Assumes limiting_asset (column name) exists as an index in assets_meta_df
                 asset_name = assets_meta_df.loc[limiting_asset, "name"]
