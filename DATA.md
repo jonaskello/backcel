@@ -64,7 +64,7 @@ These are the sheets referenced by the `Prices` setting in your asset registry s
 
 ### Sheet Structure
 
-There are two different formats supported. Either column formatted or row formatted.
+There are two different formats supported. Either column formatted or row formatted. If the first cell contains `ID` then row formatted is assumed, otherwise column formatted.
 
 #### Column formatted
 
