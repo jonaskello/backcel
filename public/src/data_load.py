@@ -6,6 +6,7 @@ from typing import Any, Callable, Sequence
 import pandas as pd
 from public.src import data_validation as dv
 import logging
+import marimo as mo
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +158,25 @@ def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_id
     except ValueError:
         raise dv.DataFileValidationError([f"Worksheet named **'{sheet_name}'** not found."], file_path)
 
+    # If the first column is named "id" then assume the format is id,date,price
+    if(preview.columns[0].lower() == "id"):
+        return read_asset_prices_row_formatted(file_path, file_name, sheet_name, preview, needed_ids)
+
+    return read_asset_prices_column_formatted(file_path, file_name, sheet_name, preview, needed_ids)
+
+# Function to read asset prices in format asset_id,date,price
+def read_asset_prices_row_formatted(file_path, file_name, sheet_name, preview, needed_ids):
+    df = read_excel_with_workarounds(file_path, sheet_name=sheet_name)
+    df.columns = [c.lower() for c in df.columns]
+    df = df[df['id'].isin(needed_ids)]
+    df[df.columns[1]] = pd.to_datetime(pd.to_numeric(df.iloc[:, 1]), unit='D', origin='1899-12-30')
+    df = df.pivot(index=df.columns[1], columns='id', values=df.columns[2])
+    # mo.stop(True, df)
+    dv.validate_asset_prices(df, file_name, sheet_name, needed_ids)
+    return df
+
+# Function to read asset prices in format date,asset1_id,asset2_id,asset3_id...
+def read_asset_prices_column_formatted(file_path, file_name, sheet_name, preview, needed_ids):
     # Identify missing IDs
     missing_ids = [id for id in needed_ids if id not in preview.columns]
     if missing_ids:
@@ -173,9 +193,15 @@ def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_id
         parse_dates=[0], 
         usecols=valid_cols
     )
+
+    #mo.stop(True, assets_prices_df)
+
+
     dv.validate_asset_prices(assets_prices_df, file_name, sheet_name, needed_ids)
 
     return assets_prices_df
+
+
 
 # Loads prices for assets specified in the assets meta dataframe
 # Expects the first column to be the Date and all other columns to be asset IDs
