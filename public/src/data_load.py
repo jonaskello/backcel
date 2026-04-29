@@ -169,9 +169,12 @@ def read_asset_prices_row_formatted(file_path, file_name, sheet_name, preview, n
     df = read_excel_with_workarounds(file_path, sheet_name=sheet_name)
     df.columns = [c.lower() for c in df.columns]
     df = df[df['id'].isin(needed_ids)]
-    df[df.columns[1]] = pd.to_datetime(pd.to_numeric(df.iloc[:, 1]), unit='D', origin='1899-12-30')
+    # Check if the date column contains numeric Excel serials
+    if pd.api.types.is_numeric_dtype(df.iloc[:, 1]):
+        df[df.columns[1]] = pd.to_datetime(df.iloc[:, 1], unit='D', origin='1899-12-30')
+    else:
+        df[df.columns[1]] = pd.to_datetime(df.iloc[:, 1])
     df = df.pivot(index=df.columns[1], columns='id', values=df.columns[2])
-    # mo.stop(True, df)
     dv.validate_asset_prices(df, file_name, sheet_name, needed_ids)
     return df
 
