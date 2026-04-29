@@ -63,13 +63,30 @@ These are the sheets referenced by the `Assets` setting in the `Main` sheet. The
 These are the sheets referenced by the `Prices` setting in your asset registry sheets. They store the time-series data.
 
 ### Sheet Structure
+
+There are two different formats supported. Either column formatted or row formatted.
+
+#### Column formatted
+
 * **Date**: The first column must contain the price dates.
 * **[Asset ID]**: Subsequent column headers must match the **IDs** defined in the registry.
 
-| Date | AAPL | MSFT | USD |
-| :--- | :--- | :--- | :--- |
+| Date       | AAPL   | MSFT   | USD   |
+| :--------- | -----: | -----: | ----: |
 | 2023-01-01 | 150.25 | 240.10 | 10.45 |
 | 2023-01-02 | 152.10 | 242.50 | 10.48 |
+
+#### Row formatted
+
+| ID   | Date       | Price  |
+| :--- | :--------- | ----:  |
+| AAPL | 2023-01-01 | 150.25 |
+| AAPL | 2023-01-02 | 151.25 |
+| MSFT | 2023-01-01 | 240.10 |
+| MSFT | 2023-01-02 | 242.50 |
+| USD  | 2023-01-01 | 10.45  |
+| USD  | 2023-01-02 | 10.48 |
+
 
 > [!TIP]
 > **Populate Data Automatically**: You can use Excel's built-in `=STOCKHISTORY()` function to fetch historical data directly into your sheets. 
