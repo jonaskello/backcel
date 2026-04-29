@@ -1,8 +1,12 @@
 import os
+import io
+import sys
 import logging
+from typing import Any, Callable, Sequence
 import pandas as pd
 from public.src import data_validation as dv
 import logging
+import marimo as mo
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +21,7 @@ def parse_excel_path(path_str, default_file):
 
 def load_settings(base_dir: str, settings_file: str, sheet_name: str):
     settings_path = os.path.join(base_dir, settings_file)
-    settings_df = pd.read_excel(settings_path, sheet_name=sheet_name)
+    settings_df = read_excel_with_workarounds(settings_path, sheet_name=sheet_name)
     # Filter out any rows where the Name starts with "_"
     if "Name" in settings_df.columns:
         settings_df = settings_df[~settings_df['Name'].str.startswith('_', na=False)]
@@ -58,7 +62,7 @@ def load_portfolios(files_df, base_dir):
         file_name = os.path.join(base_dir, row.file)
         if not os.path.exists(file_name):
             raise FileNotFoundError(row.file)
-        df = pd.read_excel(file_name, row.sheet, index_col=0)
+        df = read_excel_with_workarounds(file_name, row.sheet, index_col=0)
         
         # Drop columns that start with an underscore
         cols_to_drop = [c for c in df.columns if c.startswith('_')]
@@ -98,7 +102,7 @@ def assets_meta(base_dir, files_df, base_currency):
         if not os.path.exists(file_path):
             raise FileNotFoundError(row.file)
             
-        meta_df = pd.read_excel(file_path, sheet_name=row.sheet)
+        meta_df = read_excel_with_workarounds(file_path, sheet_name=row.sheet)
         meta_df.columns = meta_df.columns.str.lower()
         if 'id' in meta_df.columns:
             meta_df = meta_df.set_index('id')
@@ -150,10 +154,32 @@ def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_id
     #  We need to see what columns actually exist in the file first
     # This avoids a ValueError if one of your needed_ids isn't in the Excel sheet
     try:
-        preview = pd.read_excel(file_path, sheet_name=sheet_name, nrows=0)
+        preview = read_excel_with_workarounds(file_path, sheet_name=sheet_name, nrows=0)
     except ValueError:
         raise dv.DataFileValidationError([f"Worksheet named **'{sheet_name}'** not found."], file_path)
 
+    # If the first column is named "id" then assume the format is id,date,price
+    if(preview.columns[0].lower() == "id"):
+        return read_asset_prices_row_formatted(file_path, file_name, sheet_name, preview, needed_ids)
+
+    return read_asset_prices_column_formatted(file_path, file_name, sheet_name, preview, needed_ids)
+
+# Function to read asset prices in format asset_id,date,price
+def read_asset_prices_row_formatted(file_path, file_name, sheet_name, preview, needed_ids):
+    df = read_excel_with_workarounds(file_path, sheet_name=sheet_name)
+    df.columns = [c.lower() for c in df.columns]
+    df = df[df['id'].isin(needed_ids)]
+    # Check if the date column contains numeric Excel serials
+    if pd.api.types.is_numeric_dtype(df.iloc[:, 1]):
+        df[df.columns[1]] = pd.to_datetime(df.iloc[:, 1], unit='D', origin='1899-12-30')
+    else:
+        df[df.columns[1]] = pd.to_datetime(df.iloc[:, 1])
+    df = df.pivot(index=df.columns[1], columns='id', values=df.columns[2])
+    dv.validate_asset_prices(df, file_name, sheet_name, needed_ids)
+    return df
+
+# Function to read asset prices in format date,asset1_id,asset2_id,asset3_id...
+def read_asset_prices_column_formatted(file_path, file_name, sheet_name, preview, needed_ids):
     # Identify missing IDs
     missing_ids = [id for id in needed_ids if id not in preview.columns]
     if missing_ids:
@@ -163,16 +189,22 @@ def load_asset_prices_from_file_sheet(base_dir, file_name, sheet_name, needed_id
     valid_cols = [date_col] + [id for id in needed_ids if id in preview.columns]
 
     # Load only the necessary columns
-    assets_prices_df = pd.read_excel(
+    assets_prices_df = read_excel_with_workarounds(
         file_path, 
         sheet_name=sheet_name, 
         index_col=0, 
         parse_dates=[0], 
         usecols=valid_cols
     )
+
+    #mo.stop(True, assets_prices_df)
+
+
     dv.validate_asset_prices(assets_prices_df, file_name, sheet_name, needed_ids)
 
     return assets_prices_df
+
+
 
 # Loads prices for assets specified in the assets meta dataframe
 # Expects the first column to be the Date and all other columns to be asset IDs
@@ -241,3 +273,43 @@ def normalized_asset_prices(assets_meta_df, fx_data, assets_prices_df, base_curr
     assets_normalized = assets_prices_df * multipliers
 
     return assets_normalized
+
+def read_excel_with_workarounds(file_path: str, sheet_name: str, index_col: int | str | None = None, nrows: int | None = None, usecols = None, parse_dates: Any = None) -> pd.DataFrame:
+    # Build a dictionary of arguments that are NOT None
+    kwargs = {
+        "sheet_name": sheet_name,
+        "index_col": index_col,
+        "nrows": nrows,
+        "usecols": usecols,
+    }
+    if parse_dates is not None:
+        kwargs["parse_dates"] = parse_dates
+    try:
+        # First attempt: Read directly using unpacked kwargs
+        return pd.read_excel(file_path, **kwargs)
+    except PermissionError as e:
+        if sys.platform == "win32":
+            import win32file
+            import win32con
+            
+            handle = win32file.CreateFile(
+                file_path,
+                win32con.GENERIC_READ,
+                win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE | win32con.FILE_SHARE_DELETE,
+                None,
+                win32con.OPEN_EXISTING,
+                win32con.FILE_ATTRIBUTE_NORMAL,
+                None
+            )
+            
+            file_size = os.path.getsize(file_path)
+            _, data = win32file.ReadFile(handle.handle, file_size)
+            win32file.CloseHandle(handle.handle)
+            
+            if isinstance(data, str):
+                data = data.encode('utf-8')
+                
+            # Use the same cleaned kwargs for the BytesIO read
+            return pd.read_excel(io.BytesIO(data), **kwargs)
+        else:
+            raise e
