@@ -14,7 +14,7 @@ dependencies = [
     "pandas>=3.0.2",
     "plotly>=6.7.0",
     "pyportfolioopt>=1.6.0",
-    "pywin32>=311",
+    "pywin32>=311; sys_platform == 'win32'",
     "quantstats>=0.0.81",
 ]
 
