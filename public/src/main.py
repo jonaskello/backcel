@@ -100,6 +100,7 @@ async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tup
         # LOAD ASSET PRICES, NORMALIZE AND BACKFILL (according to assets meta)
         asset_prices_raw = await dl.load_asset_prices(base_dir, assets_meta_df, on_progress)
         # display(asset_prices_raw.tail(30))
+        # mo.stop(True, asset_prices_raw.tail(30))
         asset_prices_needed = dc.needed_dates_filter(asset_prices_raw, start_date, end_date)
         asset_prices_normalized = dl.normalized_asset_prices(assets_meta_df, currency_prices_proxied, asset_prices_needed, base_currency)
         asset_prices_proxied = dc.backfill_with_proxies(asset_prices_normalized, assets_meta_df)

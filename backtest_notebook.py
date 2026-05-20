@@ -9,7 +9,7 @@
 
 import marimo
 
-__generated_with = "0.23.2"
+__generated_with = "0.23.6"
 app = marimo.App(width="full", app_title="Backcel")
 
 async with app.setup:
