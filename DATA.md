@@ -29,8 +29,8 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 | **End** | `2015-07-23` | The ending date for the simulation. |
 | **Portfolios**| `Portfolios.xlsx!Tech_Stocks` | Sheet name or `Filename!Sheetname` for weights, eg. `Tech_Stocks` or `Portfolios.xlsx!Tech_Stocks`. (Repeatable). |
 | **Assets** | `Assets.xlsx!Stocks` | Sheet name or `Filename!Sheetname` for asset metadata/prices, eg. `Stocks` or `Assets.xlsx!Stocks `. (Repeatable). |
-| **borrow_rate_asset** | `BORROW_RATE` | Asset ID for the annualized borrowing rate series used by leveraged portfolios. Required if any portfolio has `__leverage` above `1.0`. |
-| **borrow_rate_premium** | `0.015` | Optional annualized premium added to the borrowing rate, where `0.015` means 1.5%. Defaults to `0`. |
+| **borrow_rate_asset** | `BORROW_RATE` | Asset ID for the annualized borrowing rate series used by leveraged portfolios. Required if any portfolio has `__leverage` above `1.0`. Values should be percent points, so `1.9` means 1.9%. |
+| **borrow_rate_premium** | `1.5` | Optional annualized premium added to the borrowing rate, where `1.5` means 1.5%. Defaults to `0`. |
 
 > [!TIP] 
 > Setting names starting with underscore (`_`) will be ignored. This can be used to disable settings without removing them.
@@ -148,5 +148,5 @@ Sets target gross exposure for a portfolio.
 * Missing or blank values default to `1.0`.
 * `1.25` means the portfolio targets 125% exposure and borrows 25% of equity.
 * Leverage is adjusted on the same schedule as `__check`. If losses push actual leverage above the target, the engine does not force selling just to reduce leverage. If gains push actual leverage below the target, the engine tops back up on the next scheduled check date.
-* Borrowing cost is calculated from the `borrow_rate_asset` annualized rate plus `borrow_rate_premium`.
+* Borrowing cost is calculated from the `borrow_rate_asset` annualized percent-point rate plus `borrow_rate_premium`.
 

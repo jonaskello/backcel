@@ -59,7 +59,7 @@ def test_leverage_top_up_happens_on_rebalance_check_date():
 
 def test_leverage_pays_borrowing_cost_from_configured_rate_asset():
     dates = pd.to_datetime(["2020-01-01", "2020-01-02"])
-    prices = pd.DataFrame({"EQ": [100.0, 100.0], "BORROW": [0.365, 0.365]}, index=dates)
+    prices = pd.DataFrame({"EQ": [100.0, 100.0], "BORROW": [36.5, 36.5]}, index=dates)
     portfolio = pd.DataFrame({"Levered": [1.0, 1.25]}, index=["EQ", "__leverage"])
     portfolio.attrs["borrow_rate_asset"] = "BORROW"
     meta = pd.DataFrame({"stddev": [0.1]}, index=["EQ"])

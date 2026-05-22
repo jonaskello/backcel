@@ -140,7 +140,7 @@ def run_backtest_one_portfolio(
         if borrowed_amount > 0.0 and i > 0:
             if borrow_rate is None:
                 raise ValueError(f"Portfolio '{port_name}' uses leverage but no borrow rate data is available.")
-            daily_borrow_rate = (borrow_rate.loc[date] + borrow_rate_premium) / 365
+            daily_borrow_rate = ((borrow_rate.loc[date] + borrow_rate_premium) / 100) / 365
         daily_ret = (asset_returns_portfolio.loc[date] * current_weights).sum() - (borrowed_amount * daily_borrow_rate)
         portfolio_returns.append(daily_ret)
 
