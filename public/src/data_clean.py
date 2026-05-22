@@ -105,12 +105,21 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                             
     return filled_prices
 
-def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, start_date: date) -> pd.DataFrame:
+def adjust_asset_prices_start_to_available_data(
+    assets_meta_df: pd.DataFrame,
+    asset_prices: pd.DataFrame,
+    start_date: date,
+    limiting_asset_ids=None,
+) -> pd.DataFrame:
+    limit_columns = list(limiting_asset_ids) if limiting_asset_ids is not None else list(asset_prices.columns)
+    limit_columns = [asset_id for asset_id in limit_columns if asset_id in asset_prices.columns]
+    asset_prices_to_limit = asset_prices[limit_columns] if limit_columns else asset_prices
+
     # Identify assets with ANY missing prices in this range
-    first_indices = asset_prices.apply(lambda col: col.first_valid_index())
+    first_indices = asset_prices_to_limit.apply(lambda col: col.first_valid_index())
     valid_indices = first_indices.dropna()
     
-    last_indices = asset_prices.apply(lambda col: col.last_valid_index())
+    last_indices = asset_prices_to_limit.apply(lambda col: col.last_valid_index())
     valid_last_indices = last_indices.dropna()
     
     # Log limiting asset
@@ -140,8 +149,10 @@ def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, as
         except KeyError:
             monitor.add(f"INFO: Limiting End Asset: {limiting_end_asset} (ends {earliest_end_date})")
 
-    # Drop rows with any missing values
-    asset_prices_adjusted = asset_prices.dropna()
+    # Drop rows where any limiting asset is missing. Proxy/dependency columns are not
+    # limiting because portfolio assets have already been backfilled from them.
+    available_index = asset_prices_to_limit.dropna().index
+    asset_prices_adjusted = asset_prices.loc[available_index]
     
     # Check if we have data left and print the actual start date
     if not asset_prices_adjusted.empty:
