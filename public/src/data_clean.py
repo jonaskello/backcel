@@ -110,6 +110,9 @@ def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, as
     first_indices = asset_prices.apply(lambda col: col.first_valid_index())
     valid_indices = first_indices.dropna()
     
+    last_indices = asset_prices.apply(lambda col: col.last_valid_index())
+    valid_last_indices = last_indices.dropna()
+    
     # Log limiting asset
     if not valid_indices.empty:
         limiting_asset = valid_indices.idxmax()
@@ -126,13 +129,25 @@ def adjust_asset_prices_start_to_available_data(assets_meta_df: pd.DataFrame, as
             except KeyError:
                 monitor.add(f"Limiting Asset: {limiting_asset} (starts {latest_date})")
 
+    if not valid_last_indices.empty:
+        limiting_end_asset = valid_last_indices.idxmin()
+        earliest_end_idx = valid_last_indices.min()
+        earliest_end_date = pd.to_datetime(str(earliest_end_idx)).date()
+        
+        try:
+            end_asset_name = assets_meta_df.loc[limiting_end_asset, "name"]
+            monitor.add(f"INFO: Limiting End Asset: {end_asset_name} ({limiting_end_asset}) ends {earliest_end_date}")
+        except KeyError:
+            monitor.add(f"INFO: Limiting End Asset: {limiting_end_asset} (ends {earliest_end_date})")
+
     # Drop rows with any missing values
     asset_prices_adjusted = asset_prices.dropna()
     
     # Check if we have data left and print the actual start date
     if not asset_prices_adjusted.empty:
         actual_start = pd.to_datetime(str(asset_prices_adjusted.index[0])).date()
-        monitor.add(f"INFO: Backtest will start on: {actual_start}")
+        actual_end = pd.to_datetime(str(asset_prices_adjusted.index[-1])).date()
+        monitor.add(f"INFO: Backtest will start on: {actual_start} and end on: {actual_end}")
     else:
         raise ValueError(f"No overlapping data found for these assets after {start_date}")
 
