@@ -29,6 +29,8 @@ Use this sheet to define global parameters using a **Name** and **Value** column
 | **End** | `2015-07-23` | The ending date for the simulation. |
 | **Portfolios**| `Portfolios.xlsx!Tech_Stocks` | Sheet name or `Filename!Sheetname` for weights, eg. `Tech_Stocks` or `Portfolios.xlsx!Tech_Stocks`. (Repeatable). |
 | **Assets** | `Assets.xlsx!Stocks` | Sheet name or `Filename!Sheetname` for asset metadata/prices, eg. `Stocks` or `Assets.xlsx!Stocks `. (Repeatable). |
+| **borrow_rate_asset** | `BORROW_RATE` | Asset ID for the annualized borrowing rate series used by leveraged portfolios. Required if any portfolio has `__leverage` above `1.0`. |
+| **borrow_rate_premium** | `0.015` | Optional annualized premium added to the borrowing rate, where `0.015` means 1.5%. Defaults to `0`. |
 
 > [!TIP] 
 > Setting names starting with underscore (`_`) will be ignored. This can be used to disable settings without removing them.
@@ -129,6 +131,7 @@ Determines how trades are triggered and sized.
 | :--- | :--- | :--- | :--- |
 | **__rb_check** | | monthly | daily |
 | **__rb_type** | | full | sigma |
+| **__leverage** | | 1.25 | 1.00 |
 | **AAPL** | Apple Inc. | 0.60 | 0.40 |
 | **GLD** | SPDR Gold | 0.40 | 0.60 |
 
@@ -139,4 +142,11 @@ Determines how trades are triggered and sized.
 > * **Disabling Portfolios**: If you want to temporarily hide a portfolio from the backtest without deleting the data, simply rename the header to start with an underscore (e.g., `_Aggressive_Strategy`).
 > * **Organization Rows**: Any row where the **ID** cell is empty will be skipped. Use this to create visual headers like "--- Emerging Markets ---" to keep your allocation tables tidy.
 > * **100% Allocation**: For the backtest to run correctly, the sum of values in a portfolio column should total **100%** (1.0).
+
+#### 3. Leverage (`__leverage`)
+Sets target gross exposure for a portfolio.
+* Missing or blank values default to `1.0`.
+* `1.25` means the portfolio targets 125% exposure and borrows 25% of equity.
+* Leverage is adjusted on the same schedule as `__rb_check`. If losses push actual leverage above the target, the engine does not force selling just to reduce leverage. If gains push actual leverage below the target, the engine tops back up on the next scheduled check date.
+* Borrowing cost is calculated from the `borrow_rate_asset` annualized rate plus `borrow_rate_premium`.
 

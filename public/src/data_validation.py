@@ -17,8 +17,8 @@ def validate_settings(df: pd.DataFrame, filename: str, sheet_name: str):
         raise DataFileValidationError([f"Column **'Value'** is missing."], filename)
 
     required = {'currency', 'start', 'end'}
-    single_only = required # These must appear exactly once
-    allowed = required | {'portfolios', 'assets'}
+    single_only = required | {'borrow_rate_asset', 'borrow_rate_premium'}
+    allowed = required | {'portfolios', 'assets', 'borrow_rate_asset', 'borrow_rate_premium'}
     
     # Extract names, ignore nulls and comments
     names_series = df['Name'].dropna().astype(str)
@@ -116,7 +116,7 @@ def validate_asset_prices(df: pd.DataFrame, file_name: str, sheet_name: str, nee
 def validate_portfolios(portfolios_map: dict[str, pd.DataFrame]):
     errors = []
     all_portfolio_names = []
-    SPECIAL_IDS = ["__rb_check", "__rb_type"]
+    SPECIAL_IDS = ["__rb_check", "__rb_type", "__leverage"]
 
     for context, df in portfolios_map.items():
         # 1. Index Check (NaN IDs)
