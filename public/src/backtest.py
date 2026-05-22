@@ -41,7 +41,7 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
         for port_name in filtered_portfolio_df.columns:
 
             # Get rebalance settings for this portfolio
-            rb_check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
+            check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
             target_leverage = get_leverage_setting(port_name, portfolio_df)
             if target_leverage > 1.0 and borrow_rate is None:
                 raise ValueError(f"Portfolio '{port_name}' uses leverage but no borrow_rate_asset is configured.")
@@ -55,7 +55,7 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
                 assets_meta_df,
                 asset_returns,
                 target_weights,
-                rb_check_freq,
+                check_freq,
                 rb_type,
                 target_leverage,
                 borrow_rate,
@@ -85,7 +85,7 @@ def run_backtest_one_portfolio(
     assets_meta_df: pd.DataFrame,
     asset_returns: pd.DataFrame,
     target_weights,
-    rb_check_freq: str | None,
+    check_freq: str | None,
     rb_type: str | None,
     target_leverage: float = 1.0,
     borrow_rate: pd.Series | None = None,
@@ -110,9 +110,9 @@ def run_backtest_one_portfolio(
     historical_weights = []
 
     # Resolve period and rebalance functions
-    actual_rb_check_freq = str(rb_check_freq).lower().strip() if rb_check_freq in PERIOD_MAPPING else "once"
+    actual_check_freq = str(check_freq).lower().strip() if check_freq in PERIOD_MAPPING else "once"
     actual_rb_type = str(rb_type).lower().strip() if rb_type in REBALANCE_STRATEGIES else "full"
-    get_period = PERIOD_MAPPING[actual_rb_check_freq]
+    get_period = PERIOD_MAPPING[actual_check_freq]
     rb_func = REBALANCE_STRATEGIES[actual_rb_type]
 
     # Init period so it will trigger first rebalance directly
@@ -159,7 +159,7 @@ def run_backtest_one_portfolio(
     return PortfolioResult(
         returns=returns_series,
         weights=weights_df,
-        check_freq=actual_rb_check_freq,
+        check_freq=actual_check_freq,
         rebalance_type=actual_rb_type,
         target_leverage=target_leverage,
     )
@@ -234,11 +234,11 @@ def period_yearly(date: pd.Timestamp):
 
 def get_rebalance_settings(name, df_portfolios):
 
-    if '__rb_check' in df_portfolios.index:
-        strat_row = df_portfolios.loc['__rb_check']
-        rb_run = str(strat_row[name]).lower().strip()
+    if '__check' in df_portfolios.index:
+        strat_row = df_portfolios.loc['__check']
+        check_freq = str(strat_row[name]).lower().strip()
     else:
-        rb_run = None
+        check_freq = None
 
     if '__rb_type' in df_portfolios.index:
         strat_row = df_portfolios.loc['__rb_type']
@@ -246,7 +246,7 @@ def get_rebalance_settings(name, df_portfolios):
     else:
         rb_type = None
 
-    return rb_run, rb_type
+    return check_freq, rb_type
 
 def get_leverage_setting(name, df_portfolios) -> float:
     if '__leverage' not in df_portfolios.index:

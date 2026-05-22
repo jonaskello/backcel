@@ -165,8 +165,8 @@ def parse_rb_run(name, rb_run):
 
 def get_rebalance_settings(name, df_portfolios):
 
-    if '__rb_check' in df_portfolios.index:
-        strat_row = df_portfolios.loc['__rb_check']
+    if '__check' in df_portfolios.index:
+        strat_row = df_portfolios.loc['__check']
         rb_run = str(strat_row[name]).lower().strip()
     else:
         rb_run = None

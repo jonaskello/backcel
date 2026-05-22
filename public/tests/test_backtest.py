@@ -46,7 +46,7 @@ def test_leverage_top_up_happens_on_rebalance_check_date():
     prices = pd.DataFrame({"EQ": [100.0, 110.0, 110.0], "BORROW": [0.0, 0.0, 0.0]}, index=dates)
     portfolio = pd.DataFrame(
         {"Levered": [1.0, "daily", 1.25]},
-        index=["EQ", "__rb_check", "__leverage"],
+        index=["EQ", "__check", "__leverage"],
     )
     portfolio.attrs["borrow_rate_asset"] = "BORROW"
     meta = pd.DataFrame({"stddev": [0.1]}, index=["EQ"])

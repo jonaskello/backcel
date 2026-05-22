@@ -114,8 +114,8 @@ These are the sheets referenced by the `Portfolios` setting in your `main.xlsx`.
 ### ⚙️ Rebalancing Settings
 Use these **Special ID Rows** to control how allocations are maintained. Settings are per-column; missing or invalid values use defaults.
 
-#### 1. Evaluation Schedule (`__rb_check`)
-Determines how often the engine checks for portfolio drift.
+#### 1. Evaluation Schedule (`__check`)
+Determines how often the engine checks whether portfolio maintenance actions should run.
 * **Options:** `once` (Default), `daily`, `weekly`, `monthly`, `quarterly`, `half-year`, `yearly`.
 
 #### 2. Execution Logic (`__rb_type`)
@@ -129,7 +129,7 @@ Determines how trades are triggered and sized.
 ### 📝 Example Layout
 | ID | _Name | Aggressive | Balanced |
 | :--- | :--- | :--- | :--- |
-| **__rb_check** | | monthly | daily |
+| **__check** | | monthly | daily |
 | **__rb_type** | | full | sigma |
 | **__leverage** | | 1.25 | 1.00 |
 | **AAPL** | Apple Inc. | 0.60 | 0.40 |
@@ -147,6 +147,6 @@ Determines how trades are triggered and sized.
 Sets target gross exposure for a portfolio.
 * Missing or blank values default to `1.0`.
 * `1.25` means the portfolio targets 125% exposure and borrows 25% of equity.
-* Leverage is adjusted on the same schedule as `__rb_check`. If losses push actual leverage above the target, the engine does not force selling just to reduce leverage. If gains push actual leverage below the target, the engine tops back up on the next scheduled check date.
+* Leverage is adjusted on the same schedule as `__check`. If losses push actual leverage above the target, the engine does not force selling just to reduce leverage. If gains push actual leverage below the target, the engine tops back up on the next scheduled check date.
 * Borrowing cost is calculated from the `borrow_rate_asset` annualized rate plus `borrow_rate_premium`.
 

@@ -116,7 +116,7 @@ def validate_asset_prices(df: pd.DataFrame, file_name: str, sheet_name: str, nee
 def validate_portfolios(portfolios_map: dict[str, pd.DataFrame]):
     errors = []
     all_portfolio_names = []
-    SPECIAL_IDS = ["__rb_check", "__rb_type", "__leverage"]
+    SPECIAL_IDS = ["__check", "__rb_type", "__leverage"]
 
     for context, df in portfolios_map.items():
         # 1. Index Check (NaN IDs)

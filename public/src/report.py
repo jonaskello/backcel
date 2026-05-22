@@ -39,8 +39,9 @@ def get_stats(results: BacktestSession):
     years = (end_date - start_date).days / 365.25
 
     # Create a mapping for the settings
-    stats['RB Check'] = {name: p.check_freq for name, p in results.portfolios.items()}
+    stats['Check'] = {name: p.check_freq for name, p in results.portfolios.items()}
     stats['RB Type'] = {name: p.rebalance_type for name, p in results.portfolios.items()}
+    stats['Leverage'] = {name: p.target_leverage for name, p in results.portfolios.items()}
 
     # Total Return (Arithmetic)
     total_return_factor = (1 + df).prod()
