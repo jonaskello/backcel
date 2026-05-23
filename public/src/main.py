@@ -70,16 +70,31 @@ async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tup
 
         # SETTINGS
         settings_sheet_name = get_settings_sheet_name()
-        start_date, end_date, base_currency, portfolio_files_df, asset_files_df = dl.load_settings(base_dir, settings_file, settings_sheet_name)
+        start_date, end_date, base_currency, portfolio_files_df, asset_files_df, borrow_rate_asset, borrow_rate_premium = dl.load_settings(base_dir, settings_file, settings_sheet_name)
         monitor.add(f"Backtest from {start_date:%Y-%m-%d} to {end_date:%Y-%m-%d} using {base_currency} as base currency")
 
         # LOAD PORTFOLIOS
         portfolio_df = dl.load_portfolios(portfolio_files_df, base_dir)
+        portfolio_df.attrs["borrow_rate_asset"] = borrow_rate_asset
+        portfolio_df.attrs["borrow_rate_premium"] = borrow_rate_premium
         # display(portfolio_df.fillna(''))
 
         # LOAD ASSETS META (filtered to the ones needed by portfolios)
         assets_meta_all = dl.assets_meta(base_dir, asset_files_df, base_currency)
-        needed_asset_ids, needed_currency_ids = dc.resolve_asset_dependencies(portfolio_df.index.unique(), assets_meta_all, base_currency)
+        portfolio_asset_ids = [
+            asset_id for asset_id in portfolio_df.index.unique()
+            if not str(asset_id).startswith("__")
+        ]
+        leverage_values = pd.to_numeric(portfolio_df.loc["__leverage"], errors="coerce") if "__leverage" in portfolio_df.index else pd.Series(dtype=float)
+        uses_leverage = leverage_values.fillna(1.0).gt(1.0).any()
+        if uses_leverage and not borrow_rate_asset:
+            raise ValueError("Portfolios using __leverage above 1.0 require a borrow_rate_asset setting.")
+
+        initial_asset_ids = list(portfolio_asset_ids)
+        if borrow_rate_asset:
+            initial_asset_ids.append(borrow_rate_asset)
+
+        needed_asset_ids, needed_currency_ids = dc.resolve_asset_dependencies(initial_asset_ids, assets_meta_all, base_currency)
         # display(needed_asset_ids)
         # display(needed_currency_ids)
         assets_meta_df = assets_meta_all.loc[assets_meta_all.index.isin(needed_asset_ids)]
@@ -108,11 +123,15 @@ async def data_load_all(base_dir: str, on_progress, settings_file) -> Result[tup
         await on_progress("Loaded assets")
 
         # ADJUST START DATE ACCORDING TO AVAILABLE DATA
+        limiting_asset_ids = list(portfolio_asset_ids)
+        if uses_leverage and borrow_rate_asset:
+            limiting_asset_ids.append(borrow_rate_asset)
+
         asset_prices_available = dc.adjust_asset_prices_start_to_available_data(
             assets_meta_df,
             asset_prices_proxied,
             start_date,
-            portfolio_df.index.unique(),
+            limiting_asset_ids,
         )
         # display(asset_prices_backtest)
 

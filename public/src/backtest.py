@@ -3,12 +3,15 @@ from dataclasses import dataclass
 from public.src.result import Result, Ok, Err
 from public.src.monitor import monitor
 
+LEVERAGE_EPSILON = 1e-10
+
 @dataclass(frozen=True)
 class PortfolioResult:
     returns: pd.Series
     weights: pd.DataFrame
     check_freq: str
     rebalance_type: str
+    target_leverage: float = 1.0
 
 @dataclass(frozen=True)
 class BacktestSession:
@@ -20,6 +23,13 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
     try:
         # Calculate percent change per day
         asset_returns = asset_prices.pct_change().fillna(0)
+        borrow_rate_asset = portfolio_df.attrs.get("borrow_rate_asset")
+        borrow_rate_premium = float(portfolio_df.attrs.get("borrow_rate_premium", 0.0) or 0.0)
+        borrow_rate = None
+        if borrow_rate_asset:
+            if borrow_rate_asset not in asset_prices.columns:
+                raise ValueError(f"Borrow rate asset '{borrow_rate_asset}' is missing from price data.")
+            borrow_rate = asset_prices[borrow_rate_asset]
 
         # Filter out any index labels starting with '__'
         filtered_portfolio_df = portfolio_df[~portfolio_df.index.astype(str).str.startswith("__")]
@@ -31,13 +41,26 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
         for port_name in filtered_portfolio_df.columns:
 
             # Get rebalance settings for this portfolio
-            rb_check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
+            check_freq, rb_type = get_rebalance_settings(port_name, portfolio_df)
+            target_leverage = get_leverage_setting(port_name, portfolio_df)
+            if target_leverage > 1.0 and borrow_rate is None:
+                raise ValueError(f"Portfolio '{port_name}' uses leverage but no borrow_rate_asset is configured.")
 
             # Get weights for this portfolio
-            target_weights = filtered_portfolio_df[port_name].dropna()
+            target_weights = pd.to_numeric(filtered_portfolio_df[port_name].dropna())
 
             # Run the backtest - returns a tuple (Series, DataFrame)
-            port_result = run_backtest_one_portfolio(port_name, assets_meta_df, asset_returns, target_weights, rb_check_freq, rb_type)
+            port_result = run_backtest_one_portfolio(
+                port_name,
+                assets_meta_df,
+                asset_returns,
+                target_weights,
+                check_freq,
+                rb_type,
+                target_leverage,
+                borrow_rate,
+                borrow_rate_premium,
+            )
             
             # Store results
             all_strategies_returns[port_name] = port_result.returns
@@ -57,7 +80,17 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
         return Err(e) 
 
 
-def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, asset_returns: pd.DataFrame, target_weights, rb_check_freq: str | None, rb_type: str | None) -> PortfolioResult:
+def run_backtest_one_portfolio(
+    port_name: str,
+    assets_meta_df: pd.DataFrame,
+    asset_returns: pd.DataFrame,
+    target_weights,
+    check_freq: str | None,
+    rb_type: str | None,
+    target_leverage: float = 1.0,
+    borrow_rate: pd.Series | None = None,
+    borrow_rate_premium: float = 0.0,
+) -> PortfolioResult:
 
     portfolio_assets = target_weights.index
     missing = set(portfolio_assets) - set(asset_returns.columns)
@@ -68,37 +101,53 @@ def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, ass
     asset_returns_portfolio = asset_returns[portfolio_assets]
     assets_meta_portfolio = assets_meta_df.reindex(portfolio_assets)
 
-    current_weights = target_weights.copy()
+    if target_leverage < 1.0:
+        raise ValueError(f"Portfolio '{port_name}' has __leverage below 1.0.")
+
+    target_allocation = target_weights / target_weights.sum()
+    current_weights = target_allocation * target_leverage
     portfolio_returns = []
     historical_weights = []
 
     # Resolve period and rebalance functions
-    actual_rb_check_freq = str(rb_check_freq).lower().strip() if rb_check_freq in PERIOD_MAPPING else "once"
+    actual_check_freq = str(check_freq).lower().strip() if check_freq in PERIOD_MAPPING else "once"
     actual_rb_type = str(rb_type).lower().strip() if rb_type in REBALANCE_STRATEGIES else "full"
-    get_period = PERIOD_MAPPING[actual_rb_check_freq]
+    get_period = PERIOD_MAPPING[actual_check_freq]
     rb_func = REBALANCE_STRATEGIES[actual_rb_type]
 
     # Init period so it will trigger first rebalance directly
     last_period = "INITIAL_DUMMY_PERIOD"
 
-    for date in asset_returns_portfolio.index:
+    for i, date in enumerate(asset_returns_portfolio.index):
         # Rebalance
         period = get_period(date)
         if period != last_period:
-            current_weights = rb_func(current_weights, target_weights, assets_meta_portfolio)
+            current_leverage = current_weights.sum()
+            managed_leverage = max(current_leverage, target_leverage)
+            current_allocation = current_weights / current_leverage
+            rebalanced_allocation = rb_func(current_allocation, target_allocation, assets_meta_portfolio)
+            current_weights = rebalanced_allocation * managed_leverage
             last_period = period
 
         # Store weights at the start of the day (overnight holdings)
         historical_weights.append(current_weights.copy())
 
         # Calculate today's portfolio return
-        daily_ret = (asset_returns_portfolio.loc[date] * current_weights).sum()
+        borrowed_amount = max(current_weights.sum() - 1.0, 0.0)
+        if borrowed_amount < LEVERAGE_EPSILON:
+            borrowed_amount = 0.0
+        daily_borrow_rate = 0.0
+        if borrowed_amount > 0.0 and i > 0:
+            if borrow_rate is None:
+                raise ValueError(f"Portfolio '{port_name}' uses leverage but no borrow rate data is available.")
+            daily_borrow_rate = ((borrow_rate.loc[date] + borrow_rate_premium) / 100) / 365
+        daily_ret = (asset_returns_portfolio.loc[date] * current_weights).sum() - (borrowed_amount * daily_borrow_rate)
         portfolio_returns.append(daily_ret)
 
         # Drift the weights for tomorrow, this reflects that winners now take up more of the pie
         current_weights = current_weights * (1 + asset_returns_portfolio.loc[date])
-        # Re-normalize weights so they represent the new % of total value
-        current_weights = current_weights / current_weights.sum()
+        # Scale exposures by equity after asset returns and borrowing costs.
+        current_weights = current_weights / (1 + daily_ret)
 
     # Create the returns Series
     returns_series = pd.Series(portfolio_returns, index=asset_returns_portfolio.index)
@@ -110,8 +159,9 @@ def run_backtest_one_portfolio(port_name: str, assets_meta_df: pd.DataFrame, ass
     return PortfolioResult(
         returns=returns_series,
         weights=weights_df,
-        check_freq=actual_rb_check_freq,
-        rebalance_type=actual_rb_type
+        check_freq=actual_check_freq,
+        rebalance_type=actual_rb_type,
+        target_leverage=target_leverage,
     )
 
 def rebalance_full(current: pd.Series, ideal: pd.Series, assets_meta: pd.DataFrame) -> pd.Series:
@@ -184,11 +234,11 @@ def period_yearly(date: pd.Timestamp):
 
 def get_rebalance_settings(name, df_portfolios):
 
-    if '__rb_check' in df_portfolios.index:
-        strat_row = df_portfolios.loc['__rb_check']
-        rb_run = str(strat_row[name]).lower().strip()
+    if '__check' in df_portfolios.index:
+        strat_row = df_portfolios.loc['__check']
+        check_freq = str(strat_row[name]).lower().strip()
     else:
-        rb_run = None
+        check_freq = None
 
     if '__rb_type' in df_portfolios.index:
         strat_row = df_portfolios.loc['__rb_type']
@@ -196,7 +246,17 @@ def get_rebalance_settings(name, df_portfolios):
     else:
         rb_type = None
 
-    return rb_run, rb_type
+    return check_freq, rb_type
+
+def get_leverage_setting(name, df_portfolios) -> float:
+    if '__leverage' not in df_portfolios.index:
+        return 1.0
+
+    leverage = df_portfolios.loc['__leverage', name]
+    if pd.isna(leverage) or str(leverage).strip() == "":
+        return 1.0
+
+    return float(leverage)
 
 PERIOD_MAPPING = {
     'daily': period_daily,

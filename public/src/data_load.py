@@ -45,7 +45,22 @@ def load_settings(base_dir: str, settings_file: str, sheet_name: str):
         parse_excel_path(a, settings_file) for a in asset_raw
     ])
 
-    return start_date, end_date, base_currency, portfolio_files_df, asset_files_df
+    borrow_rate_asset = None
+    if (settings_df['Name'] == 'borrow_rate_asset').any():
+        borrow_rate_asset = settings_df.loc[settings_df['Name'] == 'borrow_rate_asset', 'Value'].iloc[0]
+        if pd.isna(borrow_rate_asset) or str(borrow_rate_asset).strip() == "":
+            borrow_rate_asset = None
+        else:
+            borrow_rate_asset = str(borrow_rate_asset).strip()
+
+    borrow_rate_premium = 0.0
+    if (settings_df['Name'] == 'borrow_rate_premium').any():
+        borrow_rate_premium = settings_df.loc[settings_df['Name'] == 'borrow_rate_premium', 'Value'].iloc[0]
+        if pd.isna(borrow_rate_premium) or str(borrow_rate_premium).strip() == "":
+            borrow_rate_premium = 0.0
+        borrow_rate_premium = float(borrow_rate_premium)
+
+    return start_date, end_date, base_currency, portfolio_files_df, asset_files_df, borrow_rate_asset, borrow_rate_premium
 
 
 
