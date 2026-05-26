@@ -116,17 +116,18 @@ def validate_asset_prices(df: pd.DataFrame, file_name: str, sheet_name: str, nee
 def validate_portfolios(portfolios_map: dict[str, pd.DataFrame]):
     errors = []
     all_portfolio_names = []
-    SPECIAL_IDS = ["__check", "__rb_type", "__leverage"]
 
     for context, df in portfolios_map.items():
         # 1. Index Check (NaN IDs)
         if df.index.hasnans:
             errors.append(f"[{context}] Index (ID) contains NaN values.")
 
+        validate_rebalance_trigger_rows(context, df, errors)
+
         # 2. Portfolio Column Validation
         for col in df.columns:
             # Drop special config rows for weight validation
-            asset_weights = df[col].drop(labels=[idx for idx in SPECIAL_IDS if idx in df.index], errors='ignore')
+            asset_weights = df[col][~df.index.astype(str).str.startswith("__")]
             
             # Convert to numeric
             numeric_weights = pd.to_numeric(asset_weights, errors='coerce')
@@ -166,3 +167,29 @@ def validate_portfolios(portfolios_map: dict[str, pd.DataFrame]):
 
     if errors:
         raise DataFileValidationError(errors, "Portfolios")
+
+def validate_rebalance_trigger_rows(context: str, df: pd.DataFrame, errors: list[str]):
+    asset_ids = set(df.index[~df.index.astype(str).str.startswith("__")])
+    valid_prefixes = ("__rb_trigger_down:", "__rb_trigger_up:")
+    trigger_rows = [
+        idx for idx in df.index
+        if idx in {"__rb_trigger_down", "__rb_trigger_up"} or str(idx).startswith(valid_prefixes)
+    ]
+
+    for row_id in trigger_rows:
+        row_name = str(row_id)
+        if ":" in row_name:
+            asset_id = row_name.split(":", 1)[1]
+            if asset_id not in asset_ids:
+                errors.append(f"[{context}] Rebalance trigger row **'{row_name}'** references unknown asset **'{asset_id}'**.")
+
+        for col in df.columns:
+            value = df.loc[row_id, col]
+            if pd.isna(value) or str(value).strip() == "":
+                continue
+
+            numeric_value = pd.to_numeric(value, errors='coerce')
+            if pd.isna(numeric_value):
+                errors.append(f"[{context}] Portfolio **'{col}'** has invalid rebalance trigger **'{row_name}'**: `{value}`.")
+            elif numeric_value <= 0:
+                errors.append(f"[{context}] Portfolio **'{col}'** has rebalance trigger **'{row_name}'** <= 0.")
