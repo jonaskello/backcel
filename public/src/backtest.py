@@ -48,6 +48,7 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
 
             # Get weights for this portfolio
             target_weights = pd.to_numeric(filtered_portfolio_df[port_name].dropna())
+            rb_trigger_down, rb_trigger_up = get_rebalance_triggers(port_name, portfolio_df, target_weights.index)
 
             # Run the backtest - returns a tuple (Series, DataFrame)
             port_result = run_backtest_one_portfolio(
@@ -60,6 +61,8 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
                 target_leverage,
                 borrow_rate,
                 borrow_rate_premium,
+                rb_trigger_down,
+                rb_trigger_up,
             )
             
             # Store results
@@ -90,6 +93,8 @@ def run_backtest_one_portfolio(
     target_leverage: float = 1.0,
     borrow_rate: pd.Series | None = None,
     borrow_rate_premium: float = 0.0,
+    rb_trigger_down: pd.Series | None = None,
+    rb_trigger_up: pd.Series | None = None,
 ) -> PortfolioResult:
 
     portfolio_assets = target_weights.index
@@ -125,7 +130,13 @@ def run_backtest_one_portfolio(
             current_leverage = current_weights.sum()
             managed_leverage = max(current_leverage, target_leverage)
             current_allocation = current_weights / current_leverage
-            rebalanced_allocation = rb_func(current_allocation, target_allocation, assets_meta_portfolio)
+            rebalanced_allocation = rb_func(
+                current_allocation,
+                target_allocation,
+                assets_meta_portfolio,
+                rb_trigger_down,
+                rb_trigger_up,
+            )
             current_weights = rebalanced_allocation * managed_leverage
             last_period = period
 
@@ -164,30 +175,51 @@ def run_backtest_one_portfolio(
         target_leverage=target_leverage,
     )
 
-def rebalance_full(current: pd.Series, ideal: pd.Series, assets_meta: pd.DataFrame) -> pd.Series:
+def rebalance_full(
+    current: pd.Series,
+    ideal: pd.Series,
+    assets_meta: pd.DataFrame,
+    rb_trigger_down: pd.Series | None = None,
+    rb_trigger_up: pd.Series | None = None,
+) -> pd.Series:
     return ideal
 
-def rebalance_sigma(current_weights: pd.Series, ideal_weights: pd.Series, assets_meta: pd.DataFrame) -> pd.Series:
+def rebalance_sigma(
+    current_weights: pd.Series,
+    ideal_weights: pd.Series,
+    assets_meta: pd.DataFrame,
+    rb_trigger_down: pd.Series | None = None,
+    rb_trigger_up: pd.Series | None = None,
+) -> pd.Series:
     """
     Surgical rebalance:
-    - Trigger: Drift > 1.0 * sigma
+    - Trigger: Drift outside configured sigma multipliers
     - Action: Adjust trigger asset and its opposite counterpart to 0.5 * sigma
     """
 
     sigmas = assets_meta['stddev'].fillna(0.10)
+    trigger_down = rb_trigger_down.reindex(ideal_weights.index).fillna(1.0) if rb_trigger_down is not None else pd.Series(1.0, index=ideal_weights.index)
+    trigger_up = rb_trigger_up.reindex(ideal_weights.index).fillna(1.0) if rb_trigger_up is not None else pd.Series(1.0, index=ideal_weights.index)
 
     # 1. Calculate Relative Drift: (Current / Target) - 1
     drift_pct = (current_weights / ideal_weights) - 1
     
-    # 2. Check for breach of the 1-sigma rebalance span
-    breaches = drift_pct.abs() > sigmas
+    # 2. Check for breach of the configured sigma rebalance span
+    breaches = (
+        ((drift_pct < 0) & (drift_pct.abs() > sigmas * trigger_down)) |
+        ((drift_pct > 0) & (drift_pct.abs() > sigmas * trigger_up))
+    )
 
     if not breaches.any():
         return current_weights
 
     # 3. Identify the "Trigger" asset (furthest outside its sigma)
     # We normalize drift by sigma to see who is 'most' outside their limit
-    trigger_asset = (drift_pct.abs() / sigmas).idxmax()
+    trigger_thresholds = pd.Series(
+        [trigger_up[asset_id] if drift_pct[asset_id] > 0 else trigger_down[asset_id] for asset_id in drift_pct.index],
+        index=drift_pct.index,
+    )
+    trigger_asset = (drift_pct.abs() / (sigmas * trigger_thresholds)).idxmax()
     
     # 4. Identify the "Counter" asset (closest to a trigger in the other direction)
     # If trigger is too high, we find the one most 'underweight' relative to its sigma
@@ -257,6 +289,35 @@ def get_leverage_setting(name, df_portfolios) -> float:
         return 1.0
 
     return float(leverage)
+
+def get_rebalance_triggers(name, df_portfolios, portfolio_assets) -> tuple[pd.Series, pd.Series]:
+    trigger_down = pd.Series(1.0, index=portfolio_assets, dtype=float)
+    trigger_up = pd.Series(1.0, index=portfolio_assets, dtype=float)
+
+    apply_rebalance_trigger_row(df_portfolios, name, "__rb_trigger_down", trigger_down)
+    apply_rebalance_trigger_row(df_portfolios, name, "__rb_trigger_up", trigger_up)
+
+    return trigger_down, trigger_up
+
+def apply_rebalance_trigger_row(df_portfolios, name, row_id: str, triggers: pd.Series):
+    if row_id in df_portfolios.index:
+        value = df_portfolios.loc[row_id, name]
+        if pd.notna(value) and str(value).strip() != "":
+            triggers.loc[:] = float(value)
+
+    prefix = row_id + ":"
+    override_rows = [idx for idx in df_portfolios.index if str(idx).startswith(prefix)]
+    for override_row in override_rows:
+        asset_id = str(override_row)[len(prefix):]
+        if asset_id not in triggers.index:
+            continue
+
+        value = df_portfolios.loc[override_row, name]
+        if pd.notna(value) and str(value).strip() != "":
+            triggers.loc[asset_id] = float(value)
+
+    if (triggers <= 0).any():
+        raise ValueError(f"Rebalance trigger '{row_id}' must be greater than 0.")
 
 PERIOD_MAPPING = {
     'daily': period_daily,

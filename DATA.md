@@ -131,9 +131,12 @@ Determines how trades are triggered and sized.
 | :--- | :--- | :--- | :--- |
 | **__check** | | monthly | daily |
 | **__rb_type** | | full | sigma |
+| **__rb_trigger_down** | | | 1.5 |
+| **__rb_trigger_up** | | | 2.5 |
 | **__leverage** | | 1.25 | 1.00 |
 | **AAPL** | Apple Inc. | 0.60 | 0.40 |
 | **GLD** | SPDR Gold | 0.40 | 0.60 |
+| **__rb_trigger_up:GLD** | | | 3.0 |
 
 > [!TIP]
 > **Organization**: Some tips for the portfolio sheet. 
@@ -143,7 +146,14 @@ Determines how trades are triggered and sized.
 > * **Organization Rows**: Any row where the **ID** cell is empty will be skipped. Use this to create visual headers like "--- Emerging Markets ---" to keep your allocation tables tidy.
 > * **100% Allocation**: For the backtest to run correctly, the sum of values in a portfolio column should total **100%** (1.0).
 
-#### 3. Leverage (`__leverage`)
+#### 3. Sigma Trigger Multipliers (`__rb_trigger_down`, `__rb_trigger_up`)
+Controls how far a `sigma` portfolio can drift before rebalancing.
+* Missing or blank values default to `1.0`.
+* `__rb_trigger_down = 1.5` means an underweight asset triggers when drift is more than $1.5 \times StdDev$ below target.
+* `__rb_trigger_up = 2.5` means an overweight asset triggers when drift is more than $2.5 \times StdDev$ above target.
+* Asset-specific overrides can be added with `__rb_trigger_down:ASSET_ID` and `__rb_trigger_up:ASSET_ID`.
+
+#### 4. Leverage (`__leverage`)
 Sets target gross exposure for a portfolio.
 * Missing or blank values default to `1.0`.
 * `1.25` means the portfolio targets 125% exposure and borrows 25% of equity.
