@@ -9,6 +9,7 @@ LEVERAGE_EPSILON = 1e-10
 class PortfolioResult:
     returns: pd.Series
     weights: pd.DataFrame
+    leverage: pd.Series
     check_freq: str
     rebalance_type: str
     target_leverage: float = 1.0
@@ -16,6 +17,7 @@ class PortfolioResult:
 @dataclass(frozen=True)
 class BacktestSession:
     combined_returns: pd.DataFrame
+    leverage: pd.DataFrame
     portfolios: dict[str, PortfolioResult]
 
 def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, portfolio_df: pd.DataFrame) -> Result[BacktestSession, Exception]:
@@ -36,6 +38,7 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
 
         # Return dictionaries
         all_strategies_returns: dict[str, pd.Series] = {}
+        all_strategies_leverage: dict[str, pd.Series] = {}
         all_strategies_results: dict[str, PortfolioResult] = {}
 
         for port_name in filtered_portfolio_df.columns:
@@ -67,15 +70,18 @@ def run_backtest_all(assets_meta_df: pd.DataFrame, asset_prices: pd.DataFrame, p
             
             # Store results
             all_strategies_returns[port_name] = port_result.returns
+            all_strategies_leverage[port_name] = port_result.leverage
             all_strategies_results[port_name] = port_result
 
         # Combine all returns into a single DataFrame
         combined_returns = pd.DataFrame(all_strategies_returns)
+        leverage = pd.DataFrame(all_strategies_leverage)
         
         # # Return both: a DataFrame and a Dictionary
         # return Ok((combined_returns, all_strategies_weights))
         return Ok(BacktestSession(
-            combined_returns=combined_returns, 
+            combined_returns=combined_returns,
+            leverage=leverage,
             portfolios=all_strategies_results
         ))
 
@@ -166,10 +172,13 @@ def run_backtest_one_portfolio(
     # Create the weights DataFrame
     weights_df = pd.DataFrame(historical_weights, index=asset_returns_portfolio.index)
     weights_df.columns.name = "Asset"
+    leverage_series = weights_df.sum(axis=1)
+    leverage_series.name = "Leverage"
 
     return PortfolioResult(
         returns=returns_series,
         weights=weights_df,
+        leverage=leverage_series,
         check_freq=actual_check_freq,
         rebalance_type=actual_rb_type,
         target_leverage=target_leverage,

@@ -71,6 +71,11 @@ async def load_expected(base_dir, test_file):
     expected_weights[expected_weights_cols_numeric_cols] = expected_weights[expected_weights_cols_numeric_cols].astype(float)
     expected_weights.index.name = 'Date'
     expected_stats = pd.read_excel(file_path, sheet_name='Expected_Stats', index_col=0)
+    if 'Max Leverage' not in expected_stats.columns:
+        expected_stats['Max Leverage'] = 1.0
+        columns = list(expected_stats.columns)
+        columns.insert(columns.index('Leverage') + 1, columns.pop(columns.index('Max Leverage')))
+        expected_stats = expected_stats[columns]
     expected_stats_numeric_cols = expected_stats.select_dtypes(include=['number']).columns
     expected_stats[expected_stats_numeric_cols] = expected_stats[expected_stats_numeric_cols].astype(float)
     return expected_values, expected_weights, expected_stats

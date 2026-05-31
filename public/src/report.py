@@ -13,15 +13,17 @@ def show_results(results: BacktestSession):
     # Calculate cumulative growth (1.0 basis)
     equity_curves = (1 + results.combined_returns).cumprod()
     fig = portfolio_perf(equity_curves)
+    leverage_fig = portfolio_leverage_plot(results.leverage)
     plt = portfolio_drawdown_plot2(equity_curves)
 
     # Use marimo's UI wrapper to ensure visibility in WASM
     ui_portfolio_curves = (mo.ui.plotly(fig))
+    ui_leverage_curves = mo.ui.plotly(leverage_fig)
     ui_drawdown_curves = mo.ui.plotly(plt)
     ui_monitor_messages = mo.accordion(
         {"Backtest Messages": mo.md("\n".join([f"- {m}" for m in monitor.messages]))}
     )
-    ui_all = mo.vstack([ui_monitor_messages, ui_portfolio_table, ui_portfolio_curves, ui_drawdown_curves])
+    ui_all = mo.vstack([ui_monitor_messages, ui_portfolio_table, ui_portfolio_curves, ui_leverage_curves, ui_drawdown_curves])
     mo.output.replace(ui_all)
 
 def get_stats(results: BacktestSession):
@@ -42,6 +44,7 @@ def get_stats(results: BacktestSession):
     stats['Check'] = {name: p.check_freq for name, p in results.portfolios.items()}
     stats['RB Type'] = {name: p.rebalance_type for name, p in results.portfolios.items()}
     stats['Leverage'] = {name: p.target_leverage for name, p in results.portfolios.items()}
+    stats['Max Leverage'] = results.leverage.max()
 
     # Total Return (Arithmetic)
     total_return_factor = (1 + df).prod()
@@ -203,6 +206,38 @@ def portfolio_drawdown_plot2(wealth_index):
     
     # Add a zero line
     fig.add_hline(y=0, line_color="black", line_width=1)
+
+    return fig
+
+def portfolio_leverage_plot(leverage):
+    if leverage.empty:
+        return None
+
+    fig = go.Figure()
+
+    for portfolio_name in leverage.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=leverage.index,
+                y=leverage[portfolio_name],
+                name=portfolio_name,
+                mode='lines',
+                hovertemplate="<b>%{x}</b><br>Leverage: %{y:.2f}x<extra></extra>"
+            )
+        )
+
+    fig.update_layout(
+        title="Portfolio Leverage Comparison",
+        xaxis_title="Date",
+        yaxis_title="Leverage",
+        template="plotly_white",
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        margin=dict(l=0, r=0, t=50, b=0),
+        height=400
+    )
+    fig.update_layout(yaxis_tickformat='.2f')
+    fig.add_hline(y=1, line_color="black", line_width=1)
 
     return fig
 
