@@ -1,6 +1,7 @@
 import pytest
 import pandas as pd
 from public.src.backtest import rebalance_sigma, run_backtest_all
+from public.src import report as r
 
 def test_sigma_rebalance_trigger():
     # Setup data
@@ -92,6 +93,12 @@ def test_leverage_rises_after_loss_without_forced_deleveraging():
 
     assert result.combined_returns.loc[dates[1], "Levered"] == pytest.approx(-0.25)
     assert weights.loc[dates[2], "EQ"] == pytest.approx(1.0 / 0.75)
+    assert result.portfolios["Levered"].leverage.loc[dates[2]] == pytest.approx(1.0 / 0.75)
+    pd.testing.assert_series_equal(
+        result.leverage["Levered"],
+        result.portfolios["Levered"].leverage,
+        check_names=False,
+    )
 
 def test_leverage_top_up_happens_on_rebalance_check_date():
     dates = pd.to_datetime(["2020-01-01", "2020-01-02", "2020-01-03"])
@@ -108,6 +115,9 @@ def test_leverage_top_up_happens_on_rebalance_check_date():
 
     assert result.combined_returns.loc[dates[1], "Levered"] == pytest.approx(0.125)
     assert weights.loc[dates[2], "EQ"] == pytest.approx(1.25)
+    assert result.leverage.loc[dates[2], "Levered"] == pytest.approx(1.25)
+    stats = r.get_stats(result)
+    assert stats.loc["Levered", "Max Leverage"] == pytest.approx(1.25)
 
 def test_leverage_pays_borrowing_cost_from_configured_rate_asset():
     dates = pd.to_datetime(["2020-01-01", "2020-01-02"])
