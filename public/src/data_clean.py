@@ -61,6 +61,7 @@ def needed_dates_filter(asset_prices_raw: pd.DataFrame, start_date: date, end_da
 def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.DataFrame) -> pd.DataFrame:
     # Create a copy to avoid SettingWithCopy warnings
     filled_prices = asset_prices_df.copy()
+    logged_proxy_chains = set()
     
     # Loop until no more gaps can be filled to handle chains (e.g., A -> B -> C)
     changes_made = True
@@ -87,6 +88,7 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                             filled_prices[asset_id] = proxy_series
                             new_first = filled_prices[asset_id].first_valid_index()
                             logger.info(f"Filled empty asset {asset_id} using {proxy_id} | Starts at {new_first.date()}")
+                            log_proxy_chain_once(asset_id, assets_meta_df, logged_proxy_chains)
                             changes_made = True
                         else:
                             # Calculate scaling ratio at the target's earliest available price
@@ -101,9 +103,37 @@ def backfill_with_proxies(asset_prices_df: pd.DataFrame, assets_meta_df: pd.Data
                                 filled_prices[asset_id] = target_series.combine_first(scaled_proxy)
                                 new_first = filled_prices[asset_id].first_valid_index()
                                 logger.info(f"Backfilled {asset_id} using {proxy_id} (Ratio: {ratio:.4f}) | {new_first.date()} to {target_first.date()}")
+                                log_proxy_chain_once(asset_id, assets_meta_df, logged_proxy_chains)
                                 changes_made = True
                             
     return filled_prices
+
+def log_proxy_chain_once(asset_id, assets_meta_df: pd.DataFrame, logged_proxy_chains: set):
+    if asset_id in logged_proxy_chains:
+        return
+
+    logged_proxy_chains.add(asset_id)
+    monitor.add(f"INFO: Proxy chain: {format_proxy_chain(asset_id, assets_meta_df)}")
+
+def format_proxy_chain(asset_id, assets_meta_df: pd.DataFrame) -> str:
+    chain = [str(asset_id)]
+    seen = {asset_id}
+    current_id = asset_id
+
+    while current_id in assets_meta_df.index:
+        proxy_id = assets_meta_df.loc[current_id, 'proxy']
+        if pd.isna(proxy_id) or str(proxy_id).strip() == "":
+            break
+
+        chain.append(str(proxy_id))
+        if proxy_id in seen:
+            chain[-1] = f"{proxy_id} (cycle)"
+            break
+
+        seen.add(proxy_id)
+        current_id = proxy_id
+
+    return " -> ".join(chain)
 
 def adjust_asset_prices_start_to_available_data(
     assets_meta_df: pd.DataFrame,
